@@ -754,6 +754,17 @@ h1, h2 { color: var(--ink); letter-spacing: -.035em; }
 .world-card.is-done { outline: 3px solid color-mix(in srgb, var(--world-primary) 48%, white); }
 .map__tip { max-width: none; justify-content: flex-start; margin-top: 34px; border: 1px dashed #cbdccd; border-radius: 17px; padding: 15px 20px; background: #eef6e9; box-shadow: none; }
 
+@media (min-width: 901px) {
+  .world-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .world-card { grid-column: span 2; }
+  .world-card:nth-child(4) { grid-column: 2 / span 2; }
+  .world-card:nth-child(5) { grid-column: 4 / span 2; }
+}
+
+@media (min-width: 651px) and (max-width: 900px) {
+  .world-card:last-child { width: calc(50% - 11px); grid-column: 1 / -1; justify-self: center; }
+}
+
 .chapters__hero { min-height: 238px; margin: 2px 0 28px; }
 .chapters__heading { max-width: 670px; padding-right: 90px; }
 .chapters__heading h2 { font-size: clamp(3rem, 5vw, 4.7rem); }
