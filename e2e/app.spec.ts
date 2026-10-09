@@ -7,7 +7,7 @@ test('un niño puede comenzar y resolver el primer reto', async ({ page }) => {
   await expect(page.getByAltText(/lumi saluda con alegría/i)).toBeVisible();
   await page.getByRole('button', { name: /empezar aventura/i }).click();
   await page.getByRole('button', { name: /jardín saltarín/i }).click();
-  await expect(page.getByRole('heading', { name: /qué pieza sigue/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /qué pieza falta/i })).toBeVisible();
   await page.getByRole('button', { name: 'rojo' }).click();
   await expect(page.getByText('¡Lo lograste!')).toBeVisible();
 });
@@ -78,7 +78,7 @@ test('los capítulos separan la lectura ilustrada del patrón', async ({ page })
   await page.getByRole('button', { name: /anterior/i }).click();
   await expect(page.getByRole('heading', { name: /una luz en el sendero/i })).toBeVisible();
   await page.getByRole('button', { name: /resolver el patrón/i }).click();
-  await expect(page.getByRole('heading', { name: /qué pieza sigue/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /qué pieza falta/i })).toBeVisible();
   await expect(page.getByRole('button', { name: /volver al cuento/i })).toBeVisible();
   await expect(page.getByAltText(/lumi y lila frente a un sendero/i)).toBeVisible();
   expect(await page.evaluate(() => window.scrollY)).toBe(0);
@@ -93,6 +93,24 @@ test('la ilustración del Festival acompaña el cuento y el patrón', async ({ p
   const festivalArtwork = page.getByAltText(/lumi decorando una plaza/i);
   await expect(festivalArtwork).toBeVisible();
   await page.getByRole('button', { name: /resolver el patrón/i }).click();
-  await expect(page.getByRole('heading', { name: /qué pieza sigue/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /qué pieza falta/i })).toBeVisible();
   await expect(festivalArtwork).toBeVisible();
+});
+
+test('el nivel escolar adapta la cantidad y complejidad del capítulo', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /empezar aventura/i }).click();
+  const firstGrade = page.getByRole('button', { name: /1\.º 5 patrones/i });
+  await firstGrade.click();
+  await expect(firstGrade).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name: /bosque de luz/i }).click();
+  await page.getByRole('button', { name: /capítulo 1: una luz en el sendero/i }).click();
+  await page.getByRole('button', { name: /resolver el patrón/i }).click();
+
+  await expect(page.getByText('Patrón 1 de 5')).toBeVisible();
+  await expect(page.getByText(/1\.º · reto 1 de 5/i)).toBeVisible();
+  const correctPosition = await page.locator('.choice').evaluateAll((choices) =>
+    choices.findIndex((choice) => choice.getAttribute('aria-label') === 'hoja'),
+  );
+  expect(correctPosition).not.toBe(1);
 });

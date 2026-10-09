@@ -1,4 +1,4 @@
-import type { PlayerProgress } from '../types';
+import type { GradeLevel, PlayerProgress } from '../types';
 import { WORLDS } from '../data/challenges';
 
 export const STORAGE_KEY = 'nido-pattern-progress';
@@ -8,7 +8,11 @@ export const DEFAULT_PROGRESS: PlayerProgress = {
   unlockedWorld: 1,
   completedChallenges: [],
   lastWorld: 1,
+  gradeLevel: 'k1',
 };
+
+const isGradeLevel = (value: unknown): value is GradeLevel =>
+  value === 'k1' || value === 'k2' || value === 'k3' || value === 'grade1';
 
 export const loadProgress = (): PlayerProgress => {
   try {
@@ -35,6 +39,7 @@ export const loadProgress = (): PlayerProgress => {
       unlockedWorld: Math.min(WORLDS.length, Math.max(1, parsed.unlockedWorld)),
       completedChallenges: [...new Set(parsed.completedChallenges)],
       lastWorld: Math.min(WORLDS.length, Math.max(1, parsed.lastWorld)),
+      gradeLevel: 'gradeLevel' in parsed && isGradeLevel(parsed.gradeLevel) ? parsed.gradeLevel : 'k1',
     };
   } catch {
     localStorage.removeItem(STORAGE_KEY);

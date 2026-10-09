@@ -76,8 +76,37 @@ describe('Nido', () => {
     expect(screen.getByRole('heading', { name: /una luz en el sendero/i })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /resolver el patrón/i }));
-    expect(screen.getByRole('heading', { name: /qué pieza sigue/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /qué pieza falta/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /volver al cuento/i })).toBeInTheDocument();
     expect(screen.getByAltText(/lumi y lila frente a un sendero/i)).toBeInTheDocument();
+  });
+
+  it('muestra el siguiente patrón del capítulo después de un acierto', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: /empezar aventura/i }));
+    await user.click(screen.getByRole('button', { name: /bosque de luz/i }));
+    await user.click(screen.getByRole('button', { name: /capítulo 1: una luz en el sendero/i }));
+    await user.click(screen.getByRole('button', { name: /resolver el patrón/i }));
+
+    expect(screen.getByText(/k1 · reto 1 de 3/i)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'hoja' }));
+    await user.click(screen.getByRole('button', { name: /siguiente patrón/i }));
+
+    expect(screen.getByText(/k1 · reto 2 de 3/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /qué pieza falta/i })).toBeInTheDocument();
+  });
+
+  it('adapta el capítulo al nivel escolar seleccionado', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: /empezar aventura/i }));
+    await user.click(screen.getByRole('button', { name: /1\.º 5 patrones/i }));
+    await user.click(screen.getByRole('button', { name: /bosque de luz/i }));
+    await user.click(screen.getByRole('button', { name: /capítulo 1: una luz en el sendero/i }));
+    await user.click(screen.getByRole('button', { name: /resolver el patrón/i }));
+
+    expect(screen.getByText(/1\.º · reto 1 de 5/i)).toBeInTheDocument();
+    expect(screen.getByText('Patrón 1 de 5')).toBeInTheDocument();
   });
 });

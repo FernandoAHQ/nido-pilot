@@ -15,24 +15,58 @@ describe('currículo de patrones', () => {
     expect(storyChallenges.every((challenge) => challenge.story?.imageAlt && challenge.story.narrative)).toBe(true);
   });
 
+  it('adapta cada capítulo de tres a cinco patrones según el nivel escolar', () => {
+    const storyWorlds = WORLDS.filter((world) => world.patternType === 'MIXTO');
+
+    for (const world of storyWorlds) {
+      for (const challenge of world.challenges) {
+        expect(challenge.roundsByLevel?.k1).toHaveLength(3);
+        expect(challenge.roundsByLevel?.k2).toHaveLength(3);
+        expect(challenge.roundsByLevel?.k3).toHaveLength(4);
+        expect(challenge.roundsByLevel?.grade1).toHaveLength(5);
+        for (const rounds of Object.values(challenge.roundsByLevel ?? {})) {
+          expect(rounds.map((round) => round.sequence.length)).toEqual(
+            [...rounds.map((round) => round.sequence.length)].sort((a, b) => a - b),
+          );
+        }
+      }
+    }
+  });
+
   it('cada reto tiene una respuesta correcta y un espacio vacío', () => {
     for (const challenge of WORLDS.flatMap((world) => world.challenges)) {
-      expect(challenge.sequence.filter((piece) => piece === null)).toHaveLength(1);
-      expect(challenge.choices.filter((choice) => choice.isCorrect)).toHaveLength(1);
-      expect(challenge.choices).toHaveLength(3);
+      const rounds = challenge.roundsByLevel ? Object.values(challenge.roundsByLevel).flat() : [challenge];
+      for (const round of rounds) {
+        expect(round.sequence.filter((piece) => piece === null)).toHaveLength(1);
+        expect(round.choices.filter((choice) => choice.isCorrect)).toHaveLength(1);
+        expect(round.choices).toHaveLength(3);
+      }
     }
   });
 
   it('la respuesta correcta coincide con el patrón declarado', () => {
     for (const world of WORLDS) {
       for (const challenge of world.challenges) {
-        const missingIndex = challenge.sequence.findIndex((piece) => piece === null);
-        const knownByUnit = challenge.sequence.find(
-          (piece, index) => piece && index % challenge.repeatUnitLength === missingIndex % challenge.repeatUnitLength,
-        );
-        const answer = challenge.choices.find((choice) => choice.isCorrect);
-        expect(answer?.id).toBe(knownByUnit?.id);
+        const rounds = challenge.roundsByLevel ? Object.values(challenge.roundsByLevel).flat() : [challenge];
+        for (const round of rounds) {
+          const missingIndex = round.sequence.findIndex((piece) => piece === null);
+          const knownByUnit = round.sequence.find(
+            (piece, index) => piece && index % round.repeatUnitLength === missingIndex % round.repeatUnitLength,
+          );
+          const answer = round.choices.find((choice) => choice.isCorrect);
+          expect(answer?.id).toBe(knownByUnit?.id);
+        }
       }
     }
+  });
+
+  it('mezcla la respuesta correcta entre izquierda, centro y derecha', () => {
+    const positions = WORLDS.flatMap((world) => world.challenges).flatMap((challenge) =>
+      (challenge.roundsByLevel ? Object.values(challenge.roundsByLevel).flat() : [challenge])
+        .map((round) => round.choices.findIndex((choice) => choice.isCorrect)),
+    );
+
+    expect(new Set(positions)).toEqual(new Set([0, 1, 2]));
+    expect(positions.filter((position) => position === 1).length).toBeLessThan(positions.length);
   });
 });

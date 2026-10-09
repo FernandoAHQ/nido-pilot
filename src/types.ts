@@ -1,4 +1,5 @@
 export type PatternKind = 'color' | 'shape' | 'object';
+export type GradeLevel = 'k1' | 'k2' | 'k3' | 'grade1';
 
 export interface PatternItem {
   id: string;
@@ -22,14 +23,19 @@ export interface StoryScene {
   placeholderEmoji: string;
 }
 
-export interface Challenge {
+export interface PatternRound {
   id: string;
-  worldId: string;
-  patternType: 'AB' | 'AAB' | 'ABB' | 'ABC';
-  instruction: string;
   sequence: Array<PatternItem | null>;
   choices: Choice[];
   repeatUnitLength: number;
+  difficulty: 1 | 2 | 3 | 4 | 5;
+}
+
+export interface Challenge extends PatternRound {
+  worldId: string;
+  patternType: 'AB' | 'AAB' | 'ABB' | 'ABC';
+  instruction: string;
+  roundsByLevel?: Record<GradeLevel, PatternRound[]>;
   story?: StoryScene;
 }
 
@@ -51,4 +57,5 @@ export interface PlayerProgress {
   unlockedWorld: number;
   completedChallenges: string[];
   lastWorld: number;
+  gradeLevel: GradeLevel;
 }

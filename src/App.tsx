@@ -5,11 +5,18 @@ import { Artwork } from './components/Artwork';
 import { TOTAL_CHALLENGES, WORLDS } from './data/challenges';
 import { DEFAULT_PROGRESS, loadProgress, resetProgress, saveProgress } from './lib/progress';
 import { speak } from './lib/speech';
-import type { Choice, PlayerProgress, World } from './types';
+import type { Choice, GradeLevel, PlayerProgress, World } from './types';
 
 type Screen = 'welcome' | 'map' | 'chapters' | 'play' | 'summary';
 type Feedback = 'idle' | 'wrong' | 'correct';
 type StoryMoment = 'read' | 'solve';
+
+const GRADE_OPTIONS: Array<{ id: GradeLevel; label: string; detail: string }> = [
+  { id: 'k1', label: 'K1', detail: '3 patrones · inicio' },
+  { id: 'k2', label: 'K2', detail: '3 patrones · más largos' },
+  { id: 'k3', label: 'K3', detail: '4 patrones · espacios internos' },
+  { id: 'grade1', label: '1.º', detail: '5 patrones · reto avanzado' },
+];
 
 function App() {
   const [screen, setScreen] = useState<Screen>('welcome');
@@ -22,10 +29,15 @@ function App() {
   const [audioUnavailable, setAudioUnavailable] = useState(false);
   const [showReset, setShowReset] = useState(false);
   const [storyMoment, setStoryMoment] = useState<StoryMoment>('solve');
+  const [roundIndex, setRoundIndex] = useState(0);
   const scheduledTimers = useRef<Set<number>>(new Set());
 
   const world = WORLDS[worldIndex];
   const challenge = world.challenges[challengeIndex];
+  const activeRounds = challenge?.roundsByLevel?.[progress.gradeLevel] ?? (challenge ? [challenge] : []);
+  const activeRound = activeRounds[roundIndex] ?? challenge;
+  const totalRounds = activeRounds.length || 1;
+  const isFinalRound = roundIndex === totalRounds - 1;
   const completedCount = progress.completedChallenges.length;
 
   useEffect(() => saveProgress(progress), [progress]);
@@ -36,8 +48,8 @@ function App() {
   }, []);
 
   const currentMissingIndex = useMemo(
-    () => challenge?.sequence.findIndex((piece) => piece === null) ?? -1,
-    [challenge],
+    () => activeRound?.sequence.findIndex((piece) => piece === null) ?? -1,
+    [activeRound],
   );
 
   const playInstruction = (message = challenge?.instruction) => {
@@ -73,6 +85,11 @@ function App() {
     resetPagePosition();
   };
 
+  const selectGradeLevel = (gradeLevel: GradeLevel) => {
+    setProgress((current) => ({ ...current, gradeLevel }));
+    setRoundIndex(0);
+  };
+
   const startWorld = (selectedWorld: World) => {
     const isStoryWorld = selectedWorld.patternType === 'MIXTO';
     if (!isStoryWorld && selectedWorld.number > progress.unlockedWorld) return;
@@ -94,6 +111,7 @@ function App() {
     const targetChallenge = selectedWorld.challenges[targetIndex];
     setChallengeIndex(targetIndex);
     setStoryMoment(targetChallenge.story ? 'read' : 'solve');
+    setRoundIndex(0);
     setWrongAttempts(0);
     setFeedback('idle');
     setSelectedChoice(null);
@@ -105,6 +123,7 @@ function App() {
     const targetChallenge = world.challenges[index];
     setChallengeIndex(index);
     setStoryMoment('read');
+    setRoundIndex(0);
     setWrongAttempts(0);
     setFeedback('idle');
     setSelectedChoice(null);
@@ -147,11 +166,15 @@ function App() {
 
     if (choice.isCorrect) {
       setFeedback('correct');
-      const completedChallenges = progress.completedChallenges.includes(challenge.id)
-        ? progress.completedChallenges
-        : [...progress.completedChallenges, challenge.id];
-      setProgress({ ...progress, completedChallenges });
-      playInstruction('¡Muy bien! Encontraste la pieza que faltaba.');
+      if (isFinalRound) {
+        setProgress((current) => ({
+          ...current,
+          completedChallenges: current.completedChallenges.includes(challenge.id)
+            ? current.completedChallenges
+            : [...current.completedChallenges, challenge.id],
+        }));
+      }
+      playInstruction(isFinalRound ? '¡Muy bien! Completaste todos los patrones del capítulo.' : '¡Muy bien! Encontraste la pieza. Vamos con el siguiente patrón.');
       return;
     }
 
@@ -171,6 +194,7 @@ function App() {
       const nextChallengeItem = world.challenges[next];
       setChallengeIndex(next);
       setStoryMoment(nextChallengeItem.story ? 'read' : 'solve');
+      setRoundIndex(0);
       setWrongAttempts(0);
       setFeedback('idle');
       setSelectedChoice(null);
@@ -184,6 +208,20 @@ function App() {
     setScreen('summary');
     resetPagePosition();
     playInstruction('¡Misión cumplida! Tu robot está muy feliz.');
+  };
+
+  const advanceAfterSuccess = () => {
+    if (challenge.story && !isFinalRound) {
+      setRoundIndex((current) => current + 1);
+      setWrongAttempts(0);
+      setFeedback('idle');
+      setSelectedChoice(null);
+      resetPagePosition();
+      playInstruction('Muy bien. Ahora completa el siguiente patrón.');
+      return;
+    }
+
+    nextChallenge();
   };
 
   const onDrop = (choice: Choice) => (event: React.DragEvent) => {
@@ -274,6 +312,25 @@ function App() {
             <h2 id="map-title">Mundos de patrones</h2>
             <p>Cada mundo guarda personajes, historias y nuevos patrones por descubrir.</p>
           </div>
+          <section className="level-picker" aria-labelledby="level-picker-title">
+            <div className="level-picker__copy">
+              <span className="level-picker__icon" aria-hidden="true">★</span>
+              <span><strong id="level-picker-title">Nivel de aprendizaje</strong><small>Adapta la cantidad y dificultad de los patrones.</small></span>
+            </div>
+            <div className="level-picker__options" role="group" aria-label="Seleccionar nivel escolar">
+              {GRADE_OPTIONS.map((option) => (
+                <button
+                  key={option.id}
+                  className={progress.gradeLevel === option.id ? 'is-selected' : ''}
+                  aria-pressed={progress.gradeLevel === option.id}
+                  onClick={() => selectGradeLevel(option.id)}
+                >
+                  <strong>{option.label}</strong>
+                  <small>{option.detail}</small>
+                </button>
+              ))}
+            </div>
+          </section>
           <div className="world-grid">
             {WORLDS.map((item) => {
               const unlocked = item.patternType === 'MIXTO' || item.number <= progress.unlockedWorld;
@@ -355,8 +412,13 @@ function App() {
           <header className="playbar">
             <button className="icon-button icon-button--back" onClick={openMap} aria-label="Volver a los mundos">←</button>
             <div className="lesson-progress">
-              <div className="lesson-progress__labels"><span>{world.name}</span><strong>{challengeIndex + 1} de 6</strong></div>
-              <div className="lesson-progress__track"><span style={{ width: `${((challengeIndex + 1) / 6) * 100}%` }} /></div>
+              <div className="lesson-progress__labels">
+                <span>{world.name}</span>
+                <strong>{challenge.story && storyMoment === 'solve' ? `Patrón ${roundIndex + 1} de ${totalRounds}` : `${challengeIndex + 1} de 6`}</strong>
+              </div>
+              <div className="lesson-progress__track">
+                <span style={{ width: `${challenge.story && storyMoment === 'solve' ? ((roundIndex + 1) / totalRounds) * 100 : ((challengeIndex + 1) / 6) * 100}%` }} />
+              </div>
             </div>
             <button
               className="icon-button icon-button--sound"
@@ -410,7 +472,10 @@ function App() {
               <div className="challenge-card__topline">
                 <span className="pattern-badge">Patrón {challenge.patternType}</span>
                 {challenge.story ? (
-                  <button className="story-return" onClick={returnToStory}>← Volver al cuento</button>
+                  <div className="challenge-round-info">
+                    <span>{GRADE_OPTIONS.find((option) => option.id === progress.gradeLevel)?.label} · Reto {roundIndex + 1} de {totalRounds}</span>
+                    <button className="story-return" onClick={returnToStory}>← Volver al cuento</button>
+                  </div>
                 ) : (
                   <span className="challenge-card__stars">✦　✦　✦</span>
                 )}
@@ -429,16 +494,16 @@ function App() {
                   </span>
                 </div>
               )}
-              <h2 id="challenge-title">¿Qué pieza sigue?</h2>
-              <p>Toca una pieza para completar el patrón.</p>
+              <h2 id="challenge-title">¿Qué pieza falta?</h2>
+              <p>{challenge.story ? 'Completa este patrón para continuar el capítulo.' : 'Toca una pieza para completar el patrón.'}</p>
 
-              <div className={`sequence ${wrongAttempts >= 2 ? 'show-hint' : ''}`} aria-label="Secuencia incompleta">
-                {challenge.sequence.map((piece, index) => {
-                  const inRepeatUnit = index < challenge.repeatUnitLength;
+              <div className={`sequence ${activeRound.sequence.length >= 7 ? 'sequence--dense' : ''} ${wrongAttempts >= 2 ? 'show-hint' : ''}`} aria-label="Secuencia incompleta">
+                {activeRound.sequence.map((piece, index) => {
+                  const inRepeatUnit = index < activeRound.repeatUnitLength;
                   if (piece) {
                     return <span className={inRepeatUnit ? 'hint-unit' : ''} key={`${piece.id}-${index}`}><PatternPiece item={piece} /></span>;
                   }
-                  const correct = challenge.choices.find((choice) => choice.isCorrect)!;
+                  const correct = activeRound.choices.find((choice) => choice.isCorrect)!;
                   return (
                     <span
                       key="missing"
@@ -446,7 +511,7 @@ function App() {
                       onDragOver={(event) => event.preventDefault()}
                       onDrop={(event) => {
                         const id = event.dataTransfer.getData('text/plain');
-                        const dropped = challenge.choices.find((choice) => choice.id === id);
+                        const dropped = activeRound.choices.find((choice) => choice.id === id);
                         if (dropped) onDrop(dropped)(event);
                       }}
                       aria-label={`Espacio vacío, posición ${currentMissingIndex + 1}`}
@@ -462,7 +527,7 @@ function App() {
               )}
 
               <div className="choices" aria-label="Opciones de respuesta">
-                {challenge.choices.map((choice) => (
+                {activeRound.choices.map((choice) => (
                   <button
                     key={choice.id}
                     className={`choice ${selectedChoice === choice.id ? `is-${feedback}` : ''}`}
@@ -478,8 +543,14 @@ function App() {
               </div>
 
               {feedback === 'correct' && (
-                <button className="button button--primary continue-button" onClick={nextChallenge} autoFocus>
-                  {challengeIndex === 5 ? 'Ver mi premio' : 'Siguiente reto'} <span>→</span>
+                <button className="button button--primary continue-button" onClick={advanceAfterSuccess} autoFocus>
+                  {challenge.story && !isFinalRound
+                    ? 'Siguiente patrón'
+                    : challengeIndex === 5
+                      ? 'Ver mi premio'
+                      : challenge.story
+                        ? 'Siguiente capítulo'
+                        : 'Siguiente reto'} <span>→</span>
                 </button>
               )}
             </div>

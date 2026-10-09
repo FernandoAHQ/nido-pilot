@@ -24,4 +24,16 @@ describe('progreso local', () => {
     expect(loadProgress().unlockedWorld).toBe(6);
     expect(loadProgress().lastWorld).toBe(6);
   });
+
+  it('recupera progreso anterior usando K1 como nivel seguro', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      version: 1,
+      unlockedWorld: 2,
+      completedChallenges: ['jardin-1'],
+      lastWorld: 2,
+    }));
+
+    expect(loadProgress().gradeLevel).toBe('k1');
+    expect(loadProgress().completedChallenges).toEqual(['jardin-1']);
+  });
 });

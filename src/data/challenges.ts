@@ -1,4 +1,4 @@
-import type { Challenge, Choice, PatternItem, World } from '../types';
+import type { Challenge, Choice, GradeLevel, PatternItem, PatternRound, World } from '../types';
 
 const item = (
   id: string,
@@ -85,26 +85,91 @@ const specs: Record<Challenge['patternType'], ChallengeSpec[]> = {
   ],
 };
 
+const makePatternRound = (
+  id: string,
+  unit: ItemKey[],
+  distractors: ItemKey[],
+  sequenceLength: number,
+  missingIndex: number,
+  correctPosition: number,
+  difficulty: PatternRound['difficulty'],
+): PatternRound => {
+  const fullSequence = Array.from({ length: sequenceLength }, (_, position) => ITEMS[unit[position % unit.length]]);
+  const answer = fullSequence[missingIndex];
+  const incorrectChoices: Choice[] = distractors.map((key) => ({ ...ITEMS[key], isCorrect: false }));
+  const choices = [...incorrectChoices];
+  choices.splice(correctPosition, 0, { ...answer, isCorrect: true });
+  const sequence: Array<PatternItem | null> = [...fullSequence];
+  sequence[missingIndex] = null;
+
+  return { id, sequence, choices, repeatUnitLength: unit.length, difficulty };
+};
+
+const LEVELS: GradeLevel[] = ['k1', 'k2', 'k3', 'grade1'];
+
+const storyLevelSettings: Record<GradeLevel, { lengths: number[]; difficulties: PatternRound['difficulty'][] }> = {
+  k1: { lengths: [4, 5, 5], difficulties: [1, 1, 2] },
+  k2: { lengths: [5, 6, 6], difficulties: [1, 2, 3] },
+  k3: { lengths: [5, 6, 7, 7], difficulties: [2, 3, 3, 4] },
+  grade1: { lengths: [6, 7, 7, 8, 8], difficulties: [3, 3, 4, 4, 5] },
+};
+
+const missingIndexForDifficulty = (
+  difficulty: PatternRound['difficulty'],
+  sequenceLength: number,
+  unitLength: number,
+  seed: number,
+) => {
+  if (difficulty === 1) return sequenceLength - 1;
+  if (difficulty === 2) return Math.max(unitLength, sequenceLength - 2);
+  if (difficulty === 3) return Math.max(unitLength, sequenceLength - 3);
+  const unitOffset = difficulty === 4 ? seed % unitLength : (seed + 1) % unitLength;
+  return Math.min(sequenceLength - 1, unitLength + unitOffset);
+};
+
+const makeLevelRounds = (
+  id: string,
+  spec: ChallengeSpec,
+  seed: number,
+  story: boolean,
+): Record<GradeLevel, PatternRound[]> => Object.fromEntries(
+  LEVELS.map((level, levelIndex) => {
+    const settings = story
+      ? storyLevelSettings[level]
+      : {
+          lengths: [[5], [6], [7], [8]][levelIndex],
+          difficulties: [[1], [2], [4], [5]][levelIndex] as PatternRound['difficulty'][],
+        };
+    const rounds = settings.lengths.map((sequenceLength, roundIndex) => {
+      const difficulty = settings.difficulties[roundIndex];
+      const missingIndex = missingIndexForDifficulty(difficulty, sequenceLength, spec.unit.length, spec.missing);
+      return makePatternRound(
+        `${id}-${level}-round-${roundIndex + 1}`,
+        spec.unit,
+        spec.distractors,
+        sequenceLength,
+        missingIndex,
+        (seed + levelIndex + roundIndex) % 3,
+        difficulty,
+      );
+    });
+    return [level, rounds];
+  }),
+) as Record<GradeLevel, PatternRound[]>;
+
 const makeChallenges = (worldId: string, patternType: Challenge['patternType']): Challenge[] =>
   specs[patternType].map((spec, index) => {
-    const fullSequence = Array.from({ length: 6 }, (_, position) => ITEMS[spec.unit[position % spec.unit.length]]);
-    const answer = fullSequence[spec.missing];
-    const choices: Choice[] = [
-      { ...ITEMS[spec.distractors[0]], isCorrect: false },
-      { ...answer, isCorrect: true },
-      { ...ITEMS[spec.distractors[1]], isCorrect: false },
-    ];
-    const sequence: Array<PatternItem | null> = [...fullSequence];
-    sequence[spec.missing] = null;
+    const id = `${worldId}-${index + 1}`;
+    const roundsByLevel = makeLevelRounds(id, spec, index, false);
+    const firstRound = roundsByLevel.k1[0];
 
     return {
-      id: `${worldId}-${index + 1}`,
+      ...firstRound,
+      id,
       worldId,
       patternType,
       instruction: 'Mira con atención. ¿Qué sigue en el patrón?',
-      sequence,
-      choices,
-      repeatUnitLength: spec.unit.length,
+      roundsByLevel,
     };
   });
 
@@ -119,23 +184,17 @@ interface StoryChallengeSpec extends ChallengeSpec {
 
 const makeStoryChallenges = (worldId: string, storySpecs: StoryChallengeSpec[]): Challenge[] =>
   storySpecs.map((spec, index) => {
-    const fullSequence = Array.from({ length: 6 }, (_, position) => ITEMS[spec.unit[position % spec.unit.length]]);
-    const answer = fullSequence[spec.missing];
-    const sequence: Array<PatternItem | null> = [...fullSequence];
-    sequence[spec.missing] = null;
+    const id = `${worldId}-${index + 1}`;
+    const roundsByLevel = makeLevelRounds(id, spec, index, true);
+    const firstRound = roundsByLevel.k1[0];
 
     return {
-      id: `${worldId}-${index + 1}`,
+      ...firstRound,
+      id,
       worldId,
       patternType: spec.patternType,
       instruction: `${spec.narrative} ¿Qué pieza sigue?`,
-      sequence,
-      choices: [
-        { ...ITEMS[spec.distractors[0]], isCorrect: false },
-        { ...answer, isCorrect: true },
-        { ...ITEMS[spec.distractors[1]], isCorrect: false },
-      ],
-      repeatUnitLength: spec.unit.length,
+      roundsByLevel,
       story: {
         chapter: index + 1,
         title: spec.title,

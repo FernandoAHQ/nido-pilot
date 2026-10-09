@@ -259,6 +259,18 @@ h1, h2 { color: var(--ink); letter-spacing: -.035em; }
 .map__heading .eyebrow { margin-bottom: 8px; color: #e96155; }
 .map__heading h2 { margin: 0 0 10px; font-size: clamp(2.45rem, 4.8vw, 4.1rem); line-height: .95; }
 .map__heading > p:last-child { max-width: 590px; margin-right: auto; margin-bottom: 0; margin-left: auto; color: #56707a; font: clamp(.92rem, 1.4vw, 1.05rem)/1.5 "Trebuchet MS", sans-serif; }
+.level-picker { max-width: 1120px; display: grid; grid-template-columns: minmax(220px, .75fr) minmax(0, 2.25fr); align-items: center; gap: 18px; margin: 0 auto 28px; border: 1px solid rgba(255,255,255,.82); border-radius: 24px; padding: 14px; background: rgba(255,253,247,.88); box-shadow: 0 13px 32px rgba(50,67,52,.1); backdrop-filter: blur(10px); }
+.level-picker__copy { display: flex; align-items: center; gap: 12px; padding: 0 8px; }
+.level-picker__copy > span:last-child { min-width: 0; display: flex; flex-direction: column; }
+.level-picker__copy strong { color: var(--ink); font-size: .84rem; }
+.level-picker__copy small { margin-top: 3px; color: #687d82; font: .7rem/1.3 "Trebuchet MS", sans-serif; }
+.level-picker__icon { width: 42px; height: 42px; display: grid; flex: 0 0 42px; place-items: center; border-radius: 14px; color: #d8981d; background: #fff0bd; }
+.level-picker__options { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.level-picker__options button { min-height: 58px; display: flex; min-width: 0; align-items: flex-start; justify-content: center; flex-direction: column; border: 2px solid transparent; border-radius: 16px; padding: 9px 12px; color: #526b77; background: #f3f5ee; cursor: pointer; text-align: left; transition: transform .18s ease, border-color .18s ease, background .18s ease; }
+.level-picker__options button:hover { transform: translateY(-2px); background: #edf5ee; }
+.level-picker__options button strong { color: var(--ink); font-size: .9rem; }
+.level-picker__options button small { margin-top: 3px; overflow: hidden; font: .65rem/1.2 "Trebuchet MS", sans-serif; text-overflow: ellipsis; }
+.level-picker__options button.is-selected { border-color: #58ae83; color: #356d57; background: #e3f5e9; box-shadow: 0 5px 12px rgba(62,130,94,.12); }
 .world-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(16px, 2vw, 25px); }
 .world-card {
   position: relative;
@@ -350,6 +362,8 @@ h1, h2 { color: var(--ink); letter-spacing: -.035em; }
 .challenge-card__topline { display: flex; align-items: center; justify-content: space-between; }
 .pattern-badge { padding: 7px 13px; border-radius: 999px; color: #277967; background: #e3f7f1; font-size: .73rem; font-weight: 900; letter-spacing: .04em; text-transform: uppercase; }
 .challenge-card__stars { color: #f5cc71; font-size: .9rem; }
+.challenge-round-info { display: flex; align-items: center; gap: 10px; }
+.challenge-round-info > span { color: #687d82; font-size: .72rem; font-weight: 900; }
 .story-reader { width: min(980px, 100%); margin: clamp(22px, 4vh, 50px) auto auto; overflow: hidden; border: 2px solid rgba(255,255,255,.9); border-radius: 34px; background: white; box-shadow: 0 24px 58px rgba(49,82,95,.16); }
 .story-reader__image { position: relative; aspect-ratio: 16 / 9; overflow: hidden; background: linear-gradient(145deg, #bce9d7, #f6dc9d); }
 .artwork--reader { width: 100%; height: 100%; }
@@ -385,6 +399,12 @@ h1, h2 { color: var(--ink); letter-spacing: -.035em; }
 .challenge-card--story .pattern-piece--triangle { width: 66px; height: 61px; }
 .challenge-card--story .pattern-piece--diamond { width: 54px; height: 54px; }
 .challenge-card--story .pattern-slot { width: 74px; height: 74px; }
+.challenge-card--story .sequence--dense { gap: 8px; padding-right: 9px; padding-left: 9px; }
+.challenge-card--story .sequence--dense .pattern-piece { width: 52px; height: 52px; }
+.challenge-card--story .sequence--dense .pattern-piece--triangle { width: 55px; height: 51px; }
+.challenge-card--story .sequence--dense .pattern-piece--diamond { width: 44px; height: 44px; }
+.challenge-card--story .sequence--dense .pattern-slot { width: 62px; height: 62px; }
+.challenge-card--story .sequence--dense .pattern-piece__symbol { font-size: 2.35rem; }
 .challenge-card > p { color: var(--muted); font: 1rem "Trebuchet MS", sans-serif; }
 .sequence { display: flex; align-items: center; justify-content: center; gap: clamp(8px, 1.5vw, 16px); min-height: 125px; margin: 30px 0 26px; padding: 18px; border-radius: 24px; background: #f7faf7; }
 .sequence > span { transition: filter .3s ease, transform .3s ease; }
@@ -458,6 +478,8 @@ h1, h2 { color: var(--ink); letter-spacing: -.035em; }
 
 @media (max-width: 900px) {
   .world-grid { grid-template-columns: repeat(2, 1fr); }
+  .level-picker { grid-template-columns: 1fr; }
+  .level-picker__copy { padding: 2px 4px; }
   .play__stage { grid-template-columns: 145px minmax(0, 1fr); gap: 14px; }
   .guide .robot { width: 160px; }
   .guide__message { max-width: 160px; font-size: .78rem; }
@@ -514,6 +536,8 @@ h1, h2 { color: var(--ink); letter-spacing: -.035em; }
   .guide__message { margin: 0 0 0 -5px; }
   .challenge-card { width: 100%; min-height: 0; border-radius: 28px; }
   .challenge-card h2 { margin-top: 16px; }
+  .challenge-round-info { gap: 6px; }
+  .challenge-round-info > span { font-size: .65rem; }
   .story-reader { border-radius: 26px; }
   .story-reader__copy { padding: 20px; }
   .story-reader__actions { align-items: stretch; flex-direction: column-reverse; }
@@ -529,6 +553,17 @@ h1, h2 { color: var(--ink); letter-spacing: -.035em; }
   .pattern-piece--diamond { width: 39px; height: 39px; border-radius: 8px; }
   .pattern-piece__symbol, .pattern-piece--object .pattern-piece__symbol { font-size: 2rem; }
   .pattern-slot { width: 55px; height: 55px; border-radius: 16px; }
+  .challenge-card--story .pattern-piece { width: 45px; height: 45px; }
+  .challenge-card--story .pattern-piece--triangle { width: 49px; height: 45px; }
+  .challenge-card--story .pattern-piece--diamond { width: 39px; height: 39px; }
+  .challenge-card--story .pattern-slot { width: 55px; height: 55px; }
+  .challenge-card--story .sequence--dense { gap: 4px; padding-right: 7px; padding-left: 7px; }
+  .challenge-card--story .sequence--dense .pattern-piece { width: 36px; height: 36px; border-radius: 11px; }
+  .challenge-card--story .sequence--dense .pattern-piece--circle { border-radius: 50%; }
+  .challenge-card--story .sequence--dense .pattern-piece--triangle { width: 39px; height: 36px; }
+  .challenge-card--story .sequence--dense .pattern-piece--diamond { width: 31px; height: 31px; border-radius: 7px; }
+  .challenge-card--story .sequence--dense .pattern-slot { width: 44px; height: 44px; border-radius: 13px; }
+  .challenge-card--story .sequence--dense .pattern-piece__symbol { font-size: 1.65rem; }
   .pattern-slot .pattern-piece { transform: scale(.82); }
   .choices { gap: 13px; }
   .choice { min-width: 82px; min-height: 82px; border-radius: 22px; }
@@ -551,6 +586,9 @@ h1, h2 { color: var(--ink); letter-spacing: -.035em; }
   .welcome__hero { min-height: 320px; margin-top: 8px; }
   .welcome__lumi { width: min(87vw, 360px); }
   .speech-bubble { top: 8%; right: 0; padding: 10px 14px; font-size: .82rem; }
+  .level-picker { border-radius: 20px; padding: 11px; }
+  .level-picker__options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .level-picker__options button { min-height: 62px; }
   .world-grid { grid-template-columns: 1fr; }
   .world-card { display: grid; grid-template-columns: 110px 1fr; min-height: 130px; }
   .world-card__scene { height: 100%; }
