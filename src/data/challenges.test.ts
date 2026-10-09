@@ -2,10 +2,17 @@ import { describe, expect, it } from 'vitest';
 import { TOTAL_CHALLENGES, WORLDS } from './challenges';
 
 describe('currículo de patrones', () => {
-  it('incluye cuatro mundos y 24 retos', () => {
-    expect(WORLDS).toHaveLength(4);
-    expect(TOTAL_CHALLENGES).toBe(24);
+  it('incluye seis mundos y 36 retos', () => {
+    expect(WORLDS).toHaveLength(6);
+    expect(TOTAL_CHALLENGES).toBe(36);
     expect(WORLDS.every((world) => world.challenges.length === 6)).toBe(true);
+  });
+
+  it('incluye doce capítulos narrativos con arte reemplazable', () => {
+    const storyChallenges = WORLDS.flatMap((world) => world.challenges).filter((challenge) => challenge.story);
+    expect(storyChallenges).toHaveLength(12);
+    expect(new Set(storyChallenges.map((challenge) => challenge.story?.imagePath)).size).toBe(12);
+    expect(storyChallenges.every((challenge) => challenge.story?.imageAlt && challenge.story.narrative)).toBe(true);
   });
 
   it('cada reto tiene una respuesta correcta y un espacio vacío', () => {

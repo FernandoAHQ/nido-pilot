@@ -17,4 +17,11 @@ describe('progreso local', () => {
     expect(loadProgress()).toEqual(DEFAULT_PROGRESS);
     expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
+
+  it('acepta el progreso de los seis mundos', () => {
+    const progress = { ...DEFAULT_PROGRESS, unlockedWorld: 6, lastWorld: 6 };
+    saveProgress(progress);
+    expect(loadProgress().unlockedWorld).toBe(6);
+    expect(loadProgress().lastWorld).toBe(6);
+  });
 });

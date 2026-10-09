@@ -1,13 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { PatternPiece } from './components/PatternPiece';
 import { Robot } from './components/Robot';
+import { Artwork } from './components/Artwork';
 import { TOTAL_CHALLENGES, WORLDS } from './data/challenges';
 import { DEFAULT_PROGRESS, loadProgress, resetProgress, saveProgress } from './lib/progress';
 import { speak } from './lib/speech';
 import type { Choice, PlayerProgress, World } from './types';
 
-type Screen = 'welcome' | 'map' | 'play' | 'summary';
+type Screen = 'welcome' | 'map' | 'chapters' | 'play' | 'summary';
 type Feedback = 'idle' | 'wrong' | 'correct';
+type StoryMoment = 'read' | 'solve';
 
 function App() {
   const [screen, setScreen] = useState<Screen>('welcome');
@@ -19,12 +21,19 @@ function App() {
   const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
   const [audioUnavailable, setAudioUnavailable] = useState(false);
   const [showReset, setShowReset] = useState(false);
+  const [storyMoment, setStoryMoment] = useState<StoryMoment>('solve');
+  const scheduledTimers = useRef<Set<number>>(new Set());
 
   const world = WORLDS[worldIndex];
   const challenge = world.challenges[challengeIndex];
   const completedCount = progress.completedChallenges.length;
 
   useEffect(() => saveProgress(progress), [progress]);
+
+  useEffect(() => () => {
+    scheduledTimers.current.forEach((timer) => window.clearTimeout(timer));
+    scheduledTimers.current.clear();
+  }, []);
 
   const currentMissingIndex = useMemo(
     () => challenge?.sequence.findIndex((piece) => piece === null) ?? -1,
@@ -37,26 +46,92 @@ function App() {
     setAudioUnavailable(!didSpeak);
   };
 
+  const schedule = (callback: () => void, delay: number) => {
+    const timer = window.setTimeout(() => {
+      scheduledTimers.current.delete(timer);
+      callback();
+    }, delay);
+    scheduledTimers.current.add(timer);
+  };
+
+  const resetPagePosition = () => {
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  };
+
   const openMap = () => {
     window.speechSynthesis?.cancel();
     setScreen('map');
     setFeedback('idle');
+    resetPagePosition();
   };
 
   const startWorld = (selectedWorld: World) => {
-    if (selectedWorld.number > progress.unlockedWorld) return;
+    const isStoryWorld = selectedWorld.patternType === 'MIXTO';
+    if (!isStoryWorld && selectedWorld.number > progress.unlockedWorld) return;
     const selectedWorldIndex = selectedWorld.number - 1;
+    setWorldIndex(selectedWorldIndex);
+    setProgress((current) => ({ ...current, lastWorld: selectedWorld.number }));
+    resetPagePosition();
+
+    if (isStoryWorld) {
+      window.speechSynthesis?.cancel();
+      setScreen('chapters');
+      return;
+    }
+
     const firstIncomplete = selectedWorld.challenges.findIndex(
       (item) => !progress.completedChallenges.includes(item.id),
     );
-    setWorldIndex(selectedWorldIndex);
-    setChallengeIndex(firstIncomplete >= 0 ? firstIncomplete : 0);
+    const targetIndex = firstIncomplete >= 0 ? firstIncomplete : 0;
+    const targetChallenge = selectedWorld.challenges[targetIndex];
+    setChallengeIndex(targetIndex);
+    setStoryMoment(targetChallenge.story ? 'read' : 'solve');
     setWrongAttempts(0);
     setFeedback('idle');
     setSelectedChoice(null);
-    setProgress((current) => ({ ...current, lastWorld: selectedWorld.number }));
     setScreen('play');
-    window.setTimeout(() => playInstruction(selectedWorld.challenges[firstIncomplete >= 0 ? firstIncomplete : 0].instruction), 120);
+    schedule(() => playInstruction(targetChallenge.story?.narrative ?? targetChallenge.instruction), 120);
+  };
+
+  const openChapter = (index: number) => {
+    const targetChallenge = world.challenges[index];
+    setChallengeIndex(index);
+    setStoryMoment('read');
+    setWrongAttempts(0);
+    setFeedback('idle');
+    setSelectedChoice(null);
+    setScreen('play');
+    resetPagePosition();
+    schedule(() => playInstruction(targetChallenge.story?.narrative ?? targetChallenge.instruction), 100);
+  };
+
+  const openChapterLibrary = () => {
+    window.speechSynthesis?.cancel();
+    setScreen('chapters');
+    setFeedback('idle');
+    resetPagePosition();
+  };
+
+  const browseChapter = (direction: -1 | 1) => {
+    const nextIndex = challengeIndex + direction;
+    if (nextIndex < 0 || nextIndex >= world.challenges.length) return;
+    openChapter(nextIndex);
+  };
+
+  const beginPattern = () => {
+    setStoryMoment('solve');
+    setFeedback('idle');
+    setSelectedChoice(null);
+    resetPagePosition();
+    playInstruction('Ahora mira con atención. ¿Qué pieza sigue en el patrón?');
+  };
+
+  const returnToStory = () => {
+    if (!challenge.story) return;
+    setStoryMoment('read');
+    resetPagePosition();
+    playInstruction(challenge.story.narrative);
   };
 
   const choose = (choice: Choice) => {
@@ -77,7 +152,7 @@ function App() {
     setWrongAttempts(nextAttempts);
     setFeedback('wrong');
     playInstruction(nextAttempts >= 2 ? 'Mira las piezas que se repiten. Tú puedes.' : 'Casi. Mira otra vez el patrón.');
-    window.setTimeout(() => {
+    schedule(() => {
       setFeedback('idle');
       setSelectedChoice(null);
     }, 650);
@@ -86,17 +161,21 @@ function App() {
   const nextChallenge = () => {
     if (challengeIndex < world.challenges.length - 1) {
       const next = challengeIndex + 1;
+      const nextChallengeItem = world.challenges[next];
       setChallengeIndex(next);
+      setStoryMoment(nextChallengeItem.story ? 'read' : 'solve');
       setWrongAttempts(0);
       setFeedback('idle');
       setSelectedChoice(null);
-      window.setTimeout(() => playInstruction(world.challenges[next].instruction), 100);
+      resetPagePosition();
+      schedule(() => playInstruction(nextChallengeItem.story?.narrative ?? nextChallengeItem.instruction), 100);
       return;
     }
 
     const nextUnlocked = Math.min(WORLDS.length, Math.max(progress.unlockedWorld, world.number + 1));
     setProgress((current) => ({ ...current, unlockedWorld: nextUnlocked }));
     setScreen('summary');
+    resetPagePosition();
     playInstruction('¡Misión cumplida! Tu robot está muy feliz.');
   };
 
@@ -110,6 +189,7 @@ function App() {
     setProgress(DEFAULT_PROGRESS);
     setShowReset(false);
     setScreen('welcome');
+    resetPagePosition();
   };
 
   return (
@@ -160,7 +240,7 @@ function App() {
           </div>
           <div className="world-grid">
             {WORLDS.map((item) => {
-              const unlocked = item.number <= progress.unlockedWorld;
+              const unlocked = item.patternType === 'MIXTO' || item.number <= progress.unlockedWorld;
               const done = item.challenges.every((task) => progress.completedChallenges.includes(task.id));
               return (
                 <button
@@ -169,16 +249,20 @@ function App() {
                   style={{ '--world-primary': item.colors[0], '--world-soft': item.colors[1] } as React.CSSProperties}
                   disabled={!unlocked}
                   onClick={() => startWorld(item)}
-                  aria-label={`${item.name}, patrón ${item.patternType}${!unlocked ? ', bloqueado' : ''}`}
+                  aria-label={`${item.name}, ${item.patternType === 'MIXTO' ? 'aventura con patrones variados' : `patrón ${item.patternType}`}${!unlocked ? ', bloqueado' : ''}`}
                 >
                   <span className="world-card__number">{done ? '✓' : item.number}</span>
                   <span className="world-card__scene">
-                    <span className="world-card__emoji">{unlocked ? item.emoji : '🔒'}</span>
+                    {unlocked ? (
+                      <Artwork src={item.coverImagePath} alt={item.coverImageAlt ?? item.name} emoji={item.emoji} variant="world" />
+                    ) : (
+                      <span className="world-card__emoji">🔒</span>
+                    )}
                     <span className="world-card__sparkle">✦</span>
                   </span>
                   <span className="world-card__body">
                     <strong>{item.name}</strong>
-                    <small>Patrón {item.patternType}</small>
+                    <small>{item.patternType === 'MIXTO' ? 'Aventura ilustrada' : `Patrón ${item.patternType}`}</small>
                     <span>{unlocked ? item.subtitle : 'Completa el mundo anterior'}</span>
                   </span>
                   <span className="world-card__go" aria-hidden="true">{unlocked ? '→' : '•'}</span>
@@ -190,19 +274,93 @@ function App() {
         </section>
       )}
 
+      {screen === 'chapters' && (
+        <section className="chapters page" aria-labelledby="chapters-title">
+          <header className="topbar">
+            <button className="icon-button icon-button--back" onClick={openMap} aria-label="Volver a los mundos">←</button>
+            <div className="mini-brand"><Robot size="small" /><span>Nido</span></div>
+            <div className="progress-chip" aria-label={`${world.challenges.filter((item) => progress.completedChallenges.includes(item.id)).length} de 6 capítulos resueltos`}>
+              <span>★</span> {world.challenges.filter((item) => progress.completedChallenges.includes(item.id)).length}<small>/6</small>
+            </div>
+          </header>
+          <div className="chapters__heading">
+            <p className="eyebrow">Elige cualquier capítulo</p>
+            <h2 id="chapters-title">{world.name}</h2>
+            <p>Todos los cuentos están abiertos. Puedes leerlos en el orden que quieras.</p>
+          </div>
+          <div className="chapter-grid">
+            {world.challenges.map((item, index) => {
+              const story = item.story!;
+              const completed = progress.completedChallenges.includes(item.id);
+              return (
+                <button
+                  key={item.id}
+                  className={`chapter-card ${completed ? 'is-completed' : ''}`}
+                  onClick={() => openChapter(index)}
+                  aria-label={`Capítulo ${story.chapter}: ${story.title}${completed ? ', resuelto' : ''}`}
+                >
+                  <Artwork src={story.imagePath} alt="" emoji={story.placeholderEmoji} variant="chapter" />
+                  <span className="chapter-card__number">{completed ? '✓' : story.chapter}</span>
+                  <span className="chapter-card__copy">
+                    <small>Capítulo {story.chapter}</small>
+                    <strong>{story.title}</strong>
+                    <span>{completed ? 'Leer otra vez' : 'Leer capítulo'} <b>→</b></span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {screen === 'play' && challenge && (
-        <section className="play page" aria-labelledby="challenge-title">
+        <section className="play page" aria-labelledby={challenge.story && storyMoment === 'read' ? 'story-title' : 'challenge-title'}>
           <header className="playbar">
             <button className="icon-button icon-button--back" onClick={openMap} aria-label="Volver a los mundos">←</button>
             <div className="lesson-progress">
               <div className="lesson-progress__labels"><span>{world.name}</span><strong>{challengeIndex + 1} de 6</strong></div>
               <div className="lesson-progress__track"><span style={{ width: `${((challengeIndex + 1) / 6) * 100}%` }} /></div>
             </div>
-            <button className="icon-button icon-button--sound" onClick={() => playInstruction()} aria-label="Escuchar instrucción">🔊</button>
+            <button
+              className="icon-button icon-button--sound"
+              onClick={() => playInstruction(challenge.story && storyMoment === 'read' ? challenge.story.narrative : 'Mira con atención. ¿Qué pieza sigue en el patrón?')}
+              aria-label={challenge.story && storyMoment === 'read' ? 'Escuchar historia' : 'Escuchar instrucción'}
+            >🔊</button>
           </header>
 
           {audioUnavailable && <div className="audio-note" role="status">El audio no está disponible. Puedes seguir las pistas visuales.</div>}
 
+          {challenge.story && storyMoment === 'read' ? (
+            <article className="story-reader">
+              <div className="story-reader__image">
+                <Artwork
+                  src={challenge.story.imagePath}
+                  alt={challenge.story.imageAlt}
+                  emoji={challenge.story.placeholderEmoji}
+                  variant="reader"
+                />
+                <span className="story-reader__chapter">Capítulo {challenge.story.chapter} de 6</span>
+              </div>
+              <div className="story-reader__copy">
+                <p className="eyebrow">{world.name} · Una historia de Nido</p>
+                <h2 id="story-title">{challenge.story.title}</h2>
+                <p>{challenge.story.narrative}</p>
+                <nav className="story-reader__navigation" aria-label="Navegación de capítulos">
+                  <button onClick={() => browseChapter(-1)} disabled={challengeIndex === 0}>← Anterior</button>
+                  <button onClick={openChapterLibrary}>Todos los capítulos</button>
+                  <button onClick={() => browseChapter(1)} disabled={challengeIndex === world.challenges.length - 1}>Siguiente →</button>
+                </nav>
+                <div className="story-reader__actions">
+                  <button className="button button--quiet story-listen" onClick={() => playInstruction(challenge.story?.narrative)}>
+                    <span>🔊</span> Escuchar otra vez
+                  </button>
+                  <button className="button button--primary story-next" onClick={beginPattern}>
+                    Resolver el patrón <span>→</span>
+                  </button>
+                </div>
+              </div>
+            </article>
+          ) : (
           <div className="play__stage">
             <aside className="guide">
               <Robot mood={feedback === 'correct' ? 'cheering' : feedback === 'wrong' ? 'thinking' : 'happy'} />
@@ -211,11 +369,29 @@ function App() {
               </div>
             </aside>
 
-            <div className="challenge-card">
+            <div className={`challenge-card ${challenge.story ? 'challenge-card--story' : ''}`}>
               <div className="challenge-card__topline">
                 <span className="pattern-badge">Patrón {challenge.patternType}</span>
-                <span className="challenge-card__stars">✦　✦　✦</span>
+                {challenge.story ? (
+                  <button className="story-return" onClick={returnToStory}>← Volver al cuento</button>
+                ) : (
+                  <span className="challenge-card__stars">✦　✦　✦</span>
+                )}
               </div>
+              {challenge.story && (
+                <div className="story-pattern-context">
+                  <Artwork
+                    src={challenge.story.imagePath}
+                    alt={challenge.story.imageAlt}
+                    emoji={challenge.story.placeholderEmoji}
+                    variant="pattern"
+                  />
+                  <span className="story-pattern-context__label">
+                    <small>Capítulo {challenge.story.chapter}</small>
+                    <strong>{challenge.story.title}</strong>
+                  </span>
+                </div>
+              )}
               <h2 id="challenge-title">¿Qué pieza sigue?</h2>
               <p>Toca una pieza para completar el patrón.</p>
 
@@ -271,6 +447,7 @@ function App() {
               )}
             </div>
           </div>
+          )}
         </section>
       )}
 
@@ -284,7 +461,7 @@ function App() {
             <div className="summary__stats">
               <span><strong>6</strong><small>retos</small></span>
               <span><strong>★</strong><small>gran trabajo</small></span>
-              <span><strong>{world.patternType}</strong><small>patrón</small></span>
+              <span><strong>{world.patternType === 'MIXTO' ? 'Historia' : world.patternType}</strong><small>{world.patternType === 'MIXTO' ? 'aventura' : 'patrón'}</small></span>
             </div>
             <p>Lumi está muy orgulloso de ti.</p>
             <button className="button button--primary button--wide" onClick={openMap}>Volver a los mundos <span>→</span></button>

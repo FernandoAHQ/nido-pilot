@@ -1,4 +1,5 @@
 import type { PlayerProgress } from '../types';
+import { WORLDS } from '../data/challenges';
 
 export const STORAGE_KEY = 'nido-pattern-progress';
 
@@ -31,9 +32,9 @@ export const loadProgress = (): PlayerProgress => {
     }
     return {
       version: 1,
-      unlockedWorld: Math.min(4, Math.max(1, parsed.unlockedWorld)),
+      unlockedWorld: Math.min(WORLDS.length, Math.max(1, parsed.unlockedWorld)),
       completedChallenges: [...new Set(parsed.completedChallenges)],
-      lastWorld: Math.min(4, Math.max(1, parsed.lastWorld)),
+      lastWorld: Math.min(WORLDS.length, Math.max(1, parsed.lastWorld)),
     };
   } catch {
     localStorage.removeItem(STORAGE_KEY);
