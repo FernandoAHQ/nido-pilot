@@ -6,9 +6,11 @@ test('un niño puede comenzar y resolver el primer reto', async ({ page }) => {
   await expect(page.getByAltText(/nido\. pequeñas mentes/i)).toBeVisible();
   await expect(page.getByAltText(/lumi saluda con alegría/i)).toBeVisible();
   await page.getByRole('button', { name: /empezar aventura/i }).click();
-  await page.getByRole('button', { name: /jardín saltarín/i }).click();
+  await page.getByRole('button', { name: /bosque de luz/i }).click();
+  await page.getByRole('button', { name: /capítulo 1: una luz en el sendero/i }).click();
+  await page.getByRole('button', { name: /resolver el patrón/i }).click();
   await expect(page.getByRole('heading', { name: /qué pieza falta/i })).toBeVisible();
-  await page.getByRole('button', { name: 'rojo' }).click();
+  await page.getByRole('button', { name: 'hoja' }).click();
   await expect(page.getByText('¡Lo lograste!')).toBeVisible();
 });
 
@@ -45,14 +47,28 @@ test('la portada responde en los tamaños objetivo de tableta', async ({ page })
     expect(layout.ctaBottom).toBeLessThanOrEqual(layout.viewportHeight);
 
     await page.getByRole('button', { name: /empezar aventura/i }).click();
-    await expect(page.getByRole('heading', { name: /mundos de patrones/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /historias de patrones/i })).toBeVisible();
     const mapLayout = await page.evaluate(() => ({
       hasHorizontalOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
       cardCount: document.querySelectorAll('.world-card').length,
     }));
     expect(mapLayout.hasHorizontalOverflow).toBe(false);
-    expect(mapLayout.cardCount).toBe(6);
+    expect(mapLayout.cardCount).toBe(5);
   }
+});
+
+test('las cinco historias están abiertas y las nuevas tienen arte propio', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /empezar aventura/i }).click();
+
+  for (const name of [/bosque de luz/i, /festival de nido/i, /arrecife arcoíris/i, /tren de las estaciones/i, /ciudad de los inventos/i]) {
+    await expect(page.getByRole('button', { name })).toBeEnabled();
+  }
+
+  await page.getByRole('button', { name: /arrecife arcoíris/i }).click();
+  await page.getByRole('button', { name: /capítulo 1: la perla perdida/i }).click();
+  await expect(page.getByAltText(/lumi y nara descubren una concha vacía/i)).toBeVisible();
+  await expect(page.getByText(/nara cuidaba la perla luminosa/i)).toBeVisible();
 });
 
 test('los capítulos separan la lectura ilustrada del patrón', async ({ page }) => {

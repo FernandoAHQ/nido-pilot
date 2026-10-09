@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_PROGRESS, loadProgress, saveProgress, STORAGE_KEY } from './progress';
 
 describe('progreso local', () => {
-  it('inicia con el primer mundo disponible', () => {
+  it('inicia con la primera historia disponible', () => {
     expect(loadProgress()).toEqual(DEFAULT_PROGRESS);
   });
 
   it('guarda y recupera un progreso válido', () => {
-    const progress = { ...DEFAULT_PROGRESS, unlockedWorld: 2, completedChallenges: ['jardin-1'] };
+    const progress = { ...DEFAULT_PROGRESS, unlockedWorld: 2, completedChallenges: ['luciérnagas-1'] };
     saveProgress(progress);
     expect(loadProgress()).toEqual(progress);
   });
@@ -18,11 +18,11 @@ describe('progreso local', () => {
     expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 
-  it('acepta el progreso de los seis mundos', () => {
+  it('limita la posición guardada a las cinco historias', () => {
     const progress = { ...DEFAULT_PROGRESS, unlockedWorld: 6, lastWorld: 6 };
     saveProgress(progress);
-    expect(loadProgress().unlockedWorld).toBe(6);
-    expect(loadProgress().lastWorld).toBe(6);
+    expect(loadProgress().unlockedWorld).toBe(5);
+    expect(loadProgress().lastWorld).toBe(5);
   });
 
   it('recupera progreso anterior usando K1 como nivel seguro', () => {
@@ -34,6 +34,18 @@ describe('progreso local', () => {
     }));
 
     expect(loadProgress().gradeLevel).toBe('k1');
-    expect(loadProgress().completedChallenges).toEqual(['jardin-1']);
+    expect(loadProgress().completedChallenges).toEqual([]);
+  });
+
+  it('conserva capítulos narrativos y elimina retos de los mundos retirados', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      version: 1,
+      unlockedWorld: 5,
+      completedChallenges: ['jardin-1', 'luciérnagas-2', 'arrecife-1'],
+      lastWorld: 3,
+      gradeLevel: 'k2',
+    }));
+
+    expect(loadProgress().completedChallenges).toEqual(['luciérnagas-2', 'arrecife-1']);
   });
 });

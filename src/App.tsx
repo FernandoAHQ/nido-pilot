@@ -38,7 +38,8 @@ function App() {
   const activeRound = activeRounds[roundIndex] ?? challenge;
   const totalRounds = activeRounds.length || 1;
   const isFinalRound = roundIndex === totalRounds - 1;
-  const completedCount = progress.completedChallenges.length;
+  const completedCount = WORLDS.flatMap((item) => item.challenges)
+    .filter((item) => progress.completedChallenges.includes(item.id)).length;
 
   useEffect(() => saveProgress(progress), [progress]);
 
@@ -91,32 +92,12 @@ function App() {
   };
 
   const startWorld = (selectedWorld: World) => {
-    const isStoryWorld = selectedWorld.patternType === 'MIXTO';
-    if (!isStoryWorld && selectedWorld.number > progress.unlockedWorld) return;
     const selectedWorldIndex = selectedWorld.number - 1;
     setWorldIndex(selectedWorldIndex);
     setProgress((current) => ({ ...current, lastWorld: selectedWorld.number }));
     resetPagePosition();
-
-    if (isStoryWorld) {
-      window.speechSynthesis?.cancel();
-      setScreen('chapters');
-      return;
-    }
-
-    const firstIncomplete = selectedWorld.challenges.findIndex(
-      (item) => !progress.completedChallenges.includes(item.id),
-    );
-    const targetIndex = firstIncomplete >= 0 ? firstIncomplete : 0;
-    const targetChallenge = selectedWorld.challenges[targetIndex];
-    setChallengeIndex(targetIndex);
-    setStoryMoment(targetChallenge.story ? 'read' : 'solve');
-    setRoundIndex(0);
-    setWrongAttempts(0);
-    setFeedback('idle');
-    setSelectedChoice(null);
-    setScreen('play');
-    schedule(() => playInstruction(targetChallenge.story?.narrative ?? targetChallenge.instruction), 120);
+    window.speechSynthesis?.cancel();
+    setScreen('chapters');
   };
 
   const openChapter = (index: number) => {
@@ -247,7 +228,7 @@ function App() {
           <header className="welcome__header">
             <img
               className="welcome__logo"
-              src="/nido_logo.webp"
+              src="/nido_logo_transparent.png"
               alt="Nido. Pequeñas mentes, grandes patrones"
               width="1774"
               height="887"
@@ -298,7 +279,7 @@ function App() {
         <section className="map page" aria-labelledby="map-title">
           <header className="topbar map__topbar">
             <button className="map__brand" onClick={openWelcome} aria-label="Volver al inicio">
-              <img src="/nido_logo.webp" alt="" width="1774" height="887" />
+              <img src="/nido_logo_transparent.png" alt="" width="1774" height="887" />
             </button>
             <div className="topbar__actions">
               <div className="progress-chip" aria-label={`${completedCount} de ${TOTAL_CHALLENGES} estrellas`}>
@@ -307,10 +288,16 @@ function App() {
               <button className="icon-button" aria-label="Reiniciar progreso" onClick={() => setShowReset(true)}>⚙</button>
             </div>
           </header>
-          <div className="map__heading">
-            <p className="eyebrow">Elige tu próxima aventura</p>
-            <h2 id="map-title">Mundos de patrones</h2>
-            <p>Cada mundo guarda personajes, historias y nuevos patrones por descubrir.</p>
+          <div className="map__hero">
+            <div className="map__heading">
+              <p className="eyebrow">Elige tu próxima aventura</p>
+              <h2 id="map-title">Historias de<br /><em>patrones</em></h2>
+              <p>Cinco aventuras ilustradas con personajes, capítulos y nuevos patrones por descubrir.</p>
+              <span className="map__hero-note"><span aria-hidden="true">✦</span> Todas las historias están abiertas</span>
+            </div>
+            <img className="map__hero-art" src="/firefly-world-cover.webp" alt="" aria-hidden="true" />
+            <span className="map__hero-sparkle map__hero-sparkle--one" aria-hidden="true">✦</span>
+            <span className="map__hero-sparkle map__hero-sparkle--two" aria-hidden="true">✧</span>
           </div>
           <section className="level-picker" aria-labelledby="level-picker-title">
             <div className="level-picker__copy">
@@ -333,33 +320,27 @@ function App() {
           </section>
           <div className="world-grid">
             {WORLDS.map((item) => {
-              const unlocked = item.patternType === 'MIXTO' || item.number <= progress.unlockedWorld;
               const done = item.challenges.every((task) => progress.completedChallenges.includes(task.id));
               return (
                 <button
                   key={item.id}
-                  className={`world-card ${item.patternType === 'MIXTO' ? 'world-card--story' : ''} ${unlocked ? '' : 'is-locked'} ${done ? 'is-done' : ''}`}
+                  className={`world-card world-card--story ${done ? 'is-done' : ''}`}
                   data-world={item.id}
                   style={{ '--world-primary': item.colors[0], '--world-soft': item.colors[1] } as React.CSSProperties}
-                  disabled={!unlocked}
                   onClick={() => startWorld(item)}
-                  aria-label={`${item.name}, ${item.patternType === 'MIXTO' ? 'aventura con patrones variados' : `patrón ${item.patternType}`}${!unlocked ? ', bloqueado' : ''}`}
+                  aria-label={`${item.name}, aventura con patrones variados`}
                 >
-                  <span className="world-card__number">{done ? '✓' : item.number}</span>
                   <span className="world-card__scene">
-                    {unlocked ? (
-                      <Artwork src={item.coverImagePath} alt={item.coverImageAlt ?? item.name} emoji={item.emoji} variant="world" />
-                    ) : (
-                      <span className="world-card__emoji">🔒</span>
-                    )}
-                    <span className="world-card__sparkle">✦</span>
+                    <Artwork src={item.coverImagePath} alt={item.coverImageAlt ?? item.name} emoji={item.emoji} variant="world" />
+                    <span className="world-card__number">{done ? '✓' : item.number}</span>
+                    <span className="world-card__status">{done ? 'Completado' : 'Disponible'}</span>
                   </span>
                   <span className="world-card__body">
+                    <small>Cuento ilustrado</small>
                     <strong>{item.name}</strong>
-                    <small>{item.patternType === 'MIXTO' ? 'Aventura ilustrada' : `Patrón ${item.patternType}`}</small>
-                    <span>{unlocked ? item.subtitle : 'Completa el mundo anterior'}</span>
+                    <span>{item.subtitle}</span>
                   </span>
-                  <span className="world-card__go" aria-hidden="true">{unlocked ? '→' : '•'}</span>
+                  <span className="world-card__go" aria-hidden="true">→</span>
                 </button>
               );
             })}
@@ -371,16 +352,24 @@ function App() {
       {screen === 'chapters' && (
         <section className="chapters page" aria-labelledby="chapters-title">
           <header className="topbar">
-            <button className="icon-button icon-button--back" onClick={openMap} aria-label="Volver a los mundos">←</button>
-            <div className="mini-brand"><Robot size="small" /><span>Nido</span></div>
+            <button className="icon-button icon-button--back" onClick={openMap} aria-label="Volver a las historias">←</button>
+            <img className="chapters__logo" src="/nido_logo_transparent.png" alt="Nido. Pequeñas mentes, grandes patrones" width="1774" height="887" />
             <div className="progress-chip" aria-label={`${world.challenges.filter((item) => progress.completedChallenges.includes(item.id)).length} de 6 capítulos resueltos`}>
               <span>★</span> {world.challenges.filter((item) => progress.completedChallenges.includes(item.id)).length}<small>/6</small>
             </div>
           </header>
-          <div className="chapters__heading">
-            <p className="eyebrow">Elige cualquier capítulo</p>
-            <h2 id="chapters-title">{world.name}</h2>
-            <p>Todos los cuentos están abiertos. Puedes leerlos en el orden que quieras.</p>
+          <div className="chapters__hero">
+            <div className="chapters__heading">
+              <p className="eyebrow">Tu biblioteca de cuentos</p>
+              <h2 id="chapters-title">{world.name}</h2>
+              <p>Todos los cuentos están abiertos. Puedes leerlos en el orden que quieras.</p>
+              <span className="chapters__hero-note"><span aria-hidden="true">✦</span> Elige cualquier capítulo</span>
+            </div>
+            <img src={world.coverImagePath} alt="" aria-hidden="true" className="chapters__hero-art" />
+            <div className="chapters__hero-progress" aria-hidden="true">
+              <strong>{world.challenges.filter((item) => progress.completedChallenges.includes(item.id)).length}<span> / 6</span></strong>
+              <small>capítulos resueltos</small>
+            </div>
           </div>
           <div className="chapter-grid">
             {world.challenges.map((item, index) => {
@@ -395,10 +384,11 @@ function App() {
                 >
                   <Artwork src={story.imagePath} alt="" emoji={story.placeholderEmoji} variant="chapter" />
                   <span className="chapter-card__number">{completed ? '✓' : story.chapter}</span>
+                  {completed && <span className="chapter-card__done">Resuelto</span>}
                   <span className="chapter-card__copy">
                     <small>Capítulo {story.chapter}</small>
                     <strong>{story.title}</strong>
-                    <span>{completed ? 'Leer otra vez' : 'Leer capítulo'} <b>→</b></span>
+                    <span>{completed ? 'Leer otra vez' : 'Leer el cuento'} <b>→</b></span>
                   </span>
                 </button>
               );
@@ -410,7 +400,7 @@ function App() {
       {screen === 'play' && challenge && (
         <section className="play page" aria-labelledby={challenge.story && storyMoment === 'read' ? 'story-title' : 'challenge-title'}>
           <header className="playbar">
-            <button className="icon-button icon-button--back" onClick={openMap} aria-label="Volver a los mundos">←</button>
+            <button className="icon-button icon-button--back" onClick={openMap} aria-label="Volver a las historias">←</button>
             <div className="lesson-progress">
               <div className="lesson-progress__labels">
                 <span>{world.name}</span>
@@ -572,7 +562,7 @@ function App() {
               <span><strong>{world.patternType === 'MIXTO' ? 'Historia' : world.patternType}</strong><small>{world.patternType === 'MIXTO' ? 'aventura' : 'patrón'}</small></span>
             </div>
             <p>Lumi está muy orgulloso de ti.</p>
-            <button className="button button--primary button--wide" onClick={openMap}>Volver a los mundos <span>→</span></button>
+            <button className="button button--primary button--wide" onClick={openMap}>Volver a las historias <span>→</span></button>
           </div>
         </section>
       )}
@@ -582,7 +572,7 @@ function App() {
           <div className="modal" role="dialog" aria-modal="true" aria-labelledby="reset-title" onMouseDown={(event) => event.stopPropagation()}>
             <div className="modal__icon">↻</div>
             <h2 id="reset-title">¿Empezar de nuevo?</h2>
-            <p>Se borrarán las estrellas y los mundos volverán a cerrarse.</p>
+            <p>Se borrarán las estrellas y los capítulos completados.</p>
             <div className="modal__actions">
               <button className="button button--quiet" onClick={() => setShowReset(false)}>Cancelar</button>
               <button className="button button--danger" onClick={confirmReset}>Sí, reiniciar</button>

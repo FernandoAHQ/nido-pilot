@@ -14,6 +14,8 @@ export const DEFAULT_PROGRESS: PlayerProgress = {
 const isGradeLevel = (value: unknown): value is GradeLevel =>
   value === 'k1' || value === 'k2' || value === 'k3' || value === 'grade1';
 
+const storyChallengeIds = new Set(WORLDS.flatMap((world) => world.challenges.map((challenge) => challenge.id)));
+
 export const loadProgress = (): PlayerProgress => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -37,7 +39,7 @@ export const loadProgress = (): PlayerProgress => {
     return {
       version: 1,
       unlockedWorld: Math.min(WORLDS.length, Math.max(1, parsed.unlockedWorld)),
-      completedChallenges: [...new Set(parsed.completedChallenges)],
+      completedChallenges: [...new Set(parsed.completedChallenges)].filter((id) => storyChallengeIds.has(id)),
       lastWorld: Math.min(WORLDS.length, Math.max(1, parsed.lastWorld)),
       gradeLevel: 'gradeLevel' in parsed && isGradeLevel(parsed.gradeLevel) ? parsed.gradeLevel : 'k1',
     };

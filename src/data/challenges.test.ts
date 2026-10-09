@@ -2,17 +2,27 @@ import { describe, expect, it } from 'vitest';
 import { TOTAL_CHALLENGES, WORLDS } from './challenges';
 
 describe('currículo de patrones', () => {
-  it('incluye seis mundos y 36 retos', () => {
-    expect(WORLDS).toHaveLength(6);
-    expect(TOTAL_CHALLENGES).toBe(36);
+  it('incluye cinco historias y 30 capítulos', () => {
+    expect(WORLDS).toHaveLength(5);
+    expect(TOTAL_CHALLENGES).toBe(30);
     expect(WORLDS.every((world) => world.challenges.length === 6)).toBe(true);
+    expect(WORLDS.every((world) => world.patternType === 'MIXTO')).toBe(true);
   });
 
-  it('incluye doce capítulos narrativos con arte reemplazable', () => {
+  it('cada capítulo es narrativo y tiene una ilustración propia', () => {
     const storyChallenges = WORLDS.flatMap((world) => world.challenges).filter((challenge) => challenge.story);
-    expect(storyChallenges).toHaveLength(12);
-    expect(new Set(storyChallenges.map((challenge) => challenge.story?.imagePath)).size).toBe(12);
+    expect(storyChallenges).toHaveLength(30);
+    expect(new Set(storyChallenges.map((challenge) => challenge.story?.imagePath)).size).toBe(30);
     expect(storyChallenges.every((challenge) => challenge.story?.imageAlt && challenge.story.narrative)).toBe(true);
+    expect(storyChallenges.every((challenge) => (challenge.story?.narrative.split('.').length ?? 0) >= 4)).toBe(true);
+  });
+
+  it('incluye las tres nuevas aventuras planeadas', () => {
+    expect(WORLDS.map((world) => world.name)).toEqual(expect.arrayContaining([
+      'Arrecife Arcoíris',
+      'Tren de las Estaciones',
+      'Ciudad de los Inventos',
+    ]));
   });
 
   it('adapta cada capítulo de tres a cinco patrones según el nivel escolar', () => {

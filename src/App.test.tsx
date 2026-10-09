@@ -8,32 +8,35 @@ describe('Nido', () => {
   it('usa la identidad visual oficial en la portada', () => {
     render(<App />);
 
-    expect(screen.getByAltText(/nido\. pequeñas mentes/i)).toHaveAttribute('src', '/nido_logo.webp');
+    expect(screen.getByAltText(/nido\. pequeñas mentes/i)).toHaveAttribute('src', '/nido_logo_transparent.png');
     expect(screen.getByAltText(/lumi saluda con alegría/i)).toHaveAttribute('src', '/lumi_hero.webp');
     expect(screen.getByRole('heading', { name: /bienvenido a nido/i })).toBeInTheDocument();
   });
 
-  it('lleva al mapa y mantiene bloqueados los mundos futuros', async () => {
+  it('muestra cinco historias abiertas en el mapa', async () => {
     const user = userEvent.setup();
     render(<App />);
     await user.click(screen.getByRole('button', { name: /empezar aventura/i }));
 
-    expect(screen.getByRole('heading', { name: /mundos de patrones/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /jardín saltarín/i })).toBeEnabled();
-    expect(screen.getByRole('button', { name: /bahía burbuja/i })).toBeDisabled();
+    expect(screen.getByRole('heading', { name: /historias de patrones/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /bosque de luz/i })).toBeEnabled();
     expect(screen.getByRole('button', { name: /festival de nido/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /arrecife arcoíris/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /tren de las estaciones/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /ciudad de los inventos/i })).toBeEnabled();
   });
 
-  it('acepta la respuesta correcta y muestra la continuación', async () => {
+  it('acepta una respuesta dentro de una nueva historia', async () => {
     const user = userEvent.setup();
     render(<App />);
     await user.click(screen.getByRole('button', { name: /empezar aventura/i }));
-    await user.click(screen.getByRole('button', { name: /jardín saltarín/i }));
-    await user.click(screen.getByRole('button', { name: 'rojo' }));
+    await user.click(screen.getByRole('button', { name: /arrecife arcoíris/i }));
+    await user.click(screen.getByRole('button', { name: /capítulo 1: la perla perdida/i }));
+    await user.click(screen.getByRole('button', { name: /resolver el patrón/i }));
+    await user.click(screen.getByRole('button', { name: 'burbuja' }));
 
     expect(screen.getByText('¡Lo lograste!')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /siguiente reto/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /siguiente patrón/i })).toBeInTheDocument();
   });
 
   it('muestra una pista después de dos respuestas incorrectas', async () => {
@@ -41,10 +44,12 @@ describe('Nido', () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<App />);
     await user.click(screen.getByRole('button', { name: /empezar aventura/i }));
-    await user.click(screen.getByRole('button', { name: /jardín saltarín/i }));
-    await user.click(screen.getByRole('button', { name: 'amarillo' }));
+    await user.click(screen.getByRole('button', { name: /arrecife arcoíris/i }));
+    await user.click(screen.getByRole('button', { name: /capítulo 1: la perla perdida/i }));
+    await user.click(screen.getByRole('button', { name: /resolver el patrón/i }));
+    await user.click(screen.getByRole('button', { name: 'pez' }));
     await vi.advanceTimersByTimeAsync(700);
-    await user.click(screen.getByRole('button', { name: 'amarillo' }));
+    await user.click(screen.getByRole('button', { name: 'pez' }));
 
     expect(screen.getByText(/mira el grupo iluminado/i)).toBeInTheDocument();
     vi.useRealTimers();
@@ -62,6 +67,7 @@ describe('Nido', () => {
     await user.click(screen.getByRole('button', { name: /empezar aventura/i }));
     await user.click(screen.getByRole('button', { name: /bosque de luz/i }));
     expect(screen.getByRole('heading', { name: /bosque de luz/i })).toBeInTheDocument();
+    expect(screen.getByAltText(/nido\. pequeñas mentes/i)).toHaveAttribute('src', '/nido_logo_transparent.png');
     expect(screen.getByText(/todos los cuentos están abiertos/i)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /capítulo 1: una luz en el sendero/i }));
 
