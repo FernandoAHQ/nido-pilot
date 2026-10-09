@@ -1,0 +1,20 @@
+import { describe, expect, it } from 'vitest';
+import { DEFAULT_PROGRESS, loadProgress, saveProgress, STORAGE_KEY } from './progress';
+
+describe('progreso local', () => {
+  it('inicia con el primer mundo disponible', () => {
+    expect(loadProgress()).toEqual(DEFAULT_PROGRESS);
+  });
+
+  it('guarda y recupera un progreso válido', () => {
+    const progress = { ...DEFAULT_PROGRESS, unlockedWorld: 2, completedChallenges: ['jardin-1'] };
+    saveProgress(progress);
+    expect(loadProgress()).toEqual(progress);
+  });
+
+  it('descarta datos dañados de forma segura', () => {
+    localStorage.setItem(STORAGE_KEY, '{mal escrito');
+    expect(loadProgress()).toEqual(DEFAULT_PROGRESS);
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+});
