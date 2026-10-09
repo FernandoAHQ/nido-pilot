@@ -5,6 +5,14 @@ import App from './App';
 import { STORAGE_KEY } from './lib/progress';
 
 describe('Nido', () => {
+  it('usa la identidad visual oficial en la portada', () => {
+    render(<App />);
+
+    expect(screen.getByAltText(/nido\. pequeñas mentes/i)).toHaveAttribute('src', '/nido_logo.webp');
+    expect(screen.getByAltText(/lumi saluda con alegría/i)).toHaveAttribute('src', '/lumi_hero.webp');
+    expect(screen.getByRole('heading', { name: /bienvenido a nido/i })).toBeInTheDocument();
+  });
+
   it('lleva al mapa y mantiene bloqueados los mundos futuros', async () => {
     const user = userEvent.setup();
     render(<App />);

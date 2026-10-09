@@ -3,6 +3,8 @@ import { expect, test } from '@playwright/test';
 test('un niño puede comenzar y resolver el primer reto', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { name: /bienvenido a nido/i })).toBeVisible();
+  await expect(page.getByAltText(/nido\. pequeñas mentes/i)).toBeVisible();
+  await expect(page.getByAltText(/lumi saluda con alegría/i)).toBeVisible();
   await page.getByRole('button', { name: /empezar aventura/i }).click();
   await page.getByRole('button', { name: /jardín saltarín/i }).click();
   await expect(page.getByRole('heading', { name: /qué pieza sigue/i })).toBeVisible();
@@ -14,6 +16,43 @@ test('no hay desbordamiento horizontal en tableta', async ({ page }) => {
   await page.goto('/');
   const dimensions = await page.evaluate(() => ({ width: document.documentElement.clientWidth, scroll: document.documentElement.scrollWidth }));
   expect(dimensions.scroll).toBeLessThanOrEqual(dimensions.width);
+});
+
+test('la portada responde en los tamaños objetivo de tableta', async ({ page }) => {
+  const viewports = [
+    { width: 1024, height: 768 },
+    { width: 1180, height: 820 },
+    { width: 1280, height: 800 },
+    { width: 834, height: 1194 },
+  ];
+
+  for (const viewport of viewports) {
+    await page.setViewportSize(viewport);
+    await page.goto('/');
+    await expect(page.getByRole('button', { name: /empezar aventura/i })).toBeVisible();
+    await expect(page.getByAltText(/lumi saluda con alegría/i)).toBeVisible();
+
+    const layout = await page.evaluate(() => {
+      const cta = document.querySelector<HTMLButtonElement>('.welcome .button--primary')?.getBoundingClientRect();
+      return {
+        hasHorizontalOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+        ctaBottom: cta?.bottom ?? Number.POSITIVE_INFINITY,
+        viewportHeight: window.innerHeight,
+      };
+    });
+
+    expect(layout.hasHorizontalOverflow).toBe(false);
+    expect(layout.ctaBottom).toBeLessThanOrEqual(layout.viewportHeight);
+
+    await page.getByRole('button', { name: /empezar aventura/i }).click();
+    await expect(page.getByRole('heading', { name: /mundos de patrones/i })).toBeVisible();
+    const mapLayout = await page.evaluate(() => ({
+      hasHorizontalOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+      cardCount: document.querySelectorAll('.world-card').length,
+    }));
+    expect(mapLayout.hasHorizontalOverflow).toBe(false);
+    expect(mapLayout.cardCount).toBe(6);
+  }
 });
 
 test('los capítulos separan la lectura ilustrada del patrón', async ({ page }) => {

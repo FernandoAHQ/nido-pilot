@@ -66,6 +66,13 @@ function App() {
     resetPagePosition();
   };
 
+  const openWelcome = () => {
+    window.speechSynthesis?.cancel();
+    setScreen('welcome');
+    setFeedback('idle');
+    resetPagePosition();
+  };
+
   const startWorld = (selectedWorld: World) => {
     const isStoryWorld = selectedWorld.patternType === 'MIXTO';
     if (!isStoryWorld && selectedWorld.number > progress.unlockedWorld) return;
@@ -199,33 +206,62 @@ function App() {
 
       {screen === 'welcome' && (
         <section className="welcome page" aria-labelledby="welcome-title">
-          <div className="brand-pill"><span>✦</span> Pequeñas mentes, grandes patrones</div>
+          <header className="welcome__header">
+            <img
+              className="welcome__logo"
+              src="/nido_logo.webp"
+              alt="Nido. Pequeñas mentes, grandes patrones"
+              width="1774"
+              height="887"
+              loading="eager"
+            />
+            <button className="welcome__header-cta" onClick={openMap}>
+              <span>Comenzar aventura</span><span aria-hidden="true">→</span>
+            </button>
+          </header>
           <div className="welcome__content">
             <div className="welcome__copy">
               <p className="eyebrow">Una aventura para observar y descubrir</p>
-              <h1 id="welcome-title">Bienvenido a<br /><span>Nido</span></h1>
+              <h1 id="welcome-title">
+                <span className="welcome__headline-line">Bienvenido</span>
+                <span className="welcome__headline-line"><b>a </b><em>Nido</em></span>
+              </h1>
               <p className="welcome__lead">¡Hola! Soy <strong>Lumi</strong>. Juntos encontraremos la pieza que sigue.</p>
               <button className="button button--primary button--wide" onClick={openMap}>
                 <span>Empezar aventura</span><span className="button__icon">→</span>
               </button>
               {completedCount > 0 && <p className="saved-note">★ Tu aventura está guardada</p>}
+              <ul className="welcome__values" aria-label="Lo que descubrirás en Nido">
+                <li><span className="welcome__value-icon welcome__value-icon--mint" aria-hidden="true">⌁</span><strong>Observa</strong><small>Encuentra patrones</small></li>
+                <li><span className="welcome__value-icon welcome__value-icon--coral" aria-hidden="true">♥</span><strong>Descubre</strong><small>Cada pista cuenta</small></li>
+                <li><span className="welcome__value-icon welcome__value-icon--yellow" aria-hidden="true">★</span><strong>Juega</strong><small>Aprende jugando</small></li>
+                <li><span className="welcome__value-icon welcome__value-icon--blue" aria-hidden="true">●●</span><strong>Crece</strong><small>Juntos es mejor</small></li>
+              </ul>
             </div>
-            <div className="welcome__hero" aria-label="Lumi, el robot guía">
-              <div className="orbit orbit--one">●</div>
-              <div className="orbit orbit--two">★</div>
-              <Robot mood="cheering" />
+            <div className="welcome__hero">
+              <img
+                className="welcome__lumi"
+                src="/lumi_hero.webp"
+                alt="Lumi saluda con alegría y te invita a explorar Nido"
+                width="1281"
+                height="1228"
+                loading="eager"
+                fetchPriority="high"
+              />
               <div className="speech-bubble">¿Jugamos?</div>
               <div className="hero-platform" />
             </div>
           </div>
-          <p className="welcome__footer">Hecho con cariño para aprender jugando <span>♥</span></p>
+          <p className="welcome__footer"><span aria-hidden="true">⌁</span> En cada detalle hay una nueva historia <b aria-hidden="true">♥</b></p>
         </section>
       )}
 
       {screen === 'map' && (
         <section className="map page" aria-labelledby="map-title">
-          <header className="topbar">
-            <div className="mini-brand"><Robot size="small" /><span>Nido</span></div>
+          <header className="topbar map__topbar">
+            <button className="map__brand" onClick={openWelcome} aria-label="Volver al inicio">
+              <img src="/nido_logo.webp" alt="" width="1774" height="887" />
+            </button>
             <div className="topbar__actions">
               <div className="progress-chip" aria-label={`${completedCount} de ${TOTAL_CHALLENGES} estrellas`}>
                 <span>★</span> {completedCount}<small>/{TOTAL_CHALLENGES}</small>
@@ -234,9 +270,9 @@ function App() {
             </div>
           </header>
           <div className="map__heading">
-            <p className="eyebrow">Elige tu próxima misión</p>
+            <p className="eyebrow">Elige tu próxima aventura</p>
             <h2 id="map-title">Mundos de patrones</h2>
-            <p>Cada mundo tiene nuevas sorpresas para ti.</p>
+            <p>Cada mundo guarda personajes, historias y nuevos patrones por descubrir.</p>
           </div>
           <div className="world-grid">
             {WORLDS.map((item) => {
@@ -245,7 +281,8 @@ function App() {
               return (
                 <button
                   key={item.id}
-                  className={`world-card ${unlocked ? '' : 'is-locked'} ${done ? 'is-done' : ''}`}
+                  className={`world-card ${item.patternType === 'MIXTO' ? 'world-card--story' : ''} ${unlocked ? '' : 'is-locked'} ${done ? 'is-done' : ''}`}
+                  data-world={item.id}
                   style={{ '--world-primary': item.colors[0], '--world-soft': item.colors[1] } as React.CSSProperties}
                   disabled={!unlocked}
                   onClick={() => startWorld(item)}
