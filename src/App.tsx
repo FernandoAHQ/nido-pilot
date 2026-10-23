@@ -3,8 +3,9 @@ import { PatternPiece } from './components/PatternPiece';
 import { Robot } from './components/Robot';
 import { Artwork } from './components/Artwork';
 import { TOTAL_CHALLENGES, WORLDS } from './data/challenges';
+import { getPatternVoiceLine, type PatternVoiceKind } from './data/patternVoiceLines';
 import { DEFAULT_PROGRESS, loadProgress, resetProgress, saveProgress } from './lib/progress';
-import { speak } from './lib/speech';
+import { speak, stopSpeech } from './lib/speech';
 import type { Choice, GradeLevel, PlayerProgress, World } from './types';
 
 type Screen = 'welcome' | 'map' | 'chapters' | 'play' | 'summary';
@@ -46,6 +47,7 @@ function App() {
   useEffect(() => () => {
     scheduledTimers.current.forEach((timer) => window.clearTimeout(timer));
     scheduledTimers.current.clear();
+    stopSpeech();
   }, []);
 
   const currentMissingIndex = useMemo(
@@ -53,10 +55,24 @@ function App() {
     [activeRound],
   );
 
-  const playInstruction = (message = challenge?.instruction) => {
+  const playInstruction = (message = challenge?.instruction, audioPath?: string) => {
     if (!message) return;
-    const didSpeak = speak(message);
-    setAudioUnavailable(!didSpeak);
+    void speak(message, audioPath).then((didSpeak) => setAudioUnavailable(!didSpeak));
+  };
+
+  const playPatternLine = (kind: PatternVoiceKind, seed: number, fallback: string) => {
+    const line = ['luciérnagas', 'arrecife', 'estaciones', 'inventos'].includes(world.id)
+      ? getPatternVoiceLine(kind, seed)
+      : { text: fallback, audioPath: undefined };
+    playInstruction(line.text, line.audioPath);
+  };
+
+  const playPatternPrompt = (targetRoundIndex = roundIndex) => {
+    playPatternLine(
+      'instruction',
+      challengeIndex * 5 + targetRoundIndex,
+      'Mira con atención. ¿Qué pieza sigue en el patrón?',
+    );
   };
 
   const schedule = (callback: () => void, delay: number) => {
@@ -73,14 +89,14 @@ function App() {
   };
 
   const openMap = () => {
-    window.speechSynthesis?.cancel();
+    stopSpeech();
     setScreen('map');
     setFeedback('idle');
     resetPagePosition();
   };
 
   const openWelcome = () => {
-    window.speechSynthesis?.cancel();
+    stopSpeech();
     setScreen('welcome');
     setFeedback('idle');
     resetPagePosition();
@@ -96,7 +112,7 @@ function App() {
     setWorldIndex(selectedWorldIndex);
     setProgress((current) => ({ ...current, lastWorld: selectedWorld.number }));
     resetPagePosition();
-    window.speechSynthesis?.cancel();
+    stopSpeech();
     setScreen('chapters');
   };
 
@@ -110,11 +126,14 @@ function App() {
     setSelectedChoice(null);
     setScreen('play');
     resetPagePosition();
-    schedule(() => playInstruction(targetChallenge.story?.narrative ?? targetChallenge.instruction), 100);
+    playInstruction(
+      targetChallenge.story?.narrative ?? targetChallenge.instruction,
+      targetChallenge.story?.audioPath,
+    );
   };
 
   const openChapterLibrary = () => {
-    window.speechSynthesis?.cancel();
+    stopSpeech();
     setScreen('chapters');
     setFeedback('idle');
     resetPagePosition();
@@ -131,14 +150,14 @@ function App() {
     setFeedback('idle');
     setSelectedChoice(null);
     resetPagePosition();
-    playInstruction('Ahora mira con atención. ¿Qué pieza sigue en el patrón?');
+    playPatternPrompt();
   };
 
   const returnToStory = () => {
     if (!challenge.story) return;
     setStoryMoment('read');
     resetPagePosition();
-    playInstruction(challenge.story.narrative);
+    playInstruction(challenge.story.narrative, challenge.story.audioPath);
   };
 
   const choose = (choice: Choice) => {
@@ -155,14 +174,24 @@ function App() {
             : [...current.completedChallenges, challenge.id],
         }));
       }
-      playInstruction(isFinalRound ? '¡Muy bien! Completaste todos los patrones del capítulo.' : '¡Muy bien! Encontraste la pieza. Vamos con el siguiente patrón.');
+      playPatternLine(
+        isFinalRound ? 'complete' : 'correct',
+        challengeIndex * 5 + roundIndex,
+        isFinalRound
+          ? '¡Muy bien! Completaste todos los patrones del capítulo.'
+          : '¡Muy bien! Encontraste la pieza. Vamos con el siguiente patrón.',
+      );
       return;
     }
 
     const nextAttempts = wrongAttempts + 1;
     setWrongAttempts(nextAttempts);
     setFeedback('wrong');
-    playInstruction(nextAttempts >= 2 ? 'Mira las piezas que se repiten. Tú puedes.' : 'Casi. Mira otra vez el patrón.');
+    playPatternLine(
+      nextAttempts >= 2 ? 'hint' : 'retry',
+      challengeIndex * 5 + roundIndex + nextAttempts,
+      nextAttempts >= 2 ? 'Mira las piezas que se repiten. Tú puedes.' : 'Casi. Mira otra vez el patrón.',
+    );
     schedule(() => {
       setFeedback('idle');
       setSelectedChoice(null);
@@ -180,7 +209,10 @@ function App() {
       setFeedback('idle');
       setSelectedChoice(null);
       resetPagePosition();
-      schedule(() => playInstruction(nextChallengeItem.story?.narrative ?? nextChallengeItem.instruction), 100);
+      playInstruction(
+        nextChallengeItem.story?.narrative ?? nextChallengeItem.instruction,
+        nextChallengeItem.story?.audioPath,
+      );
       return;
     }
 
@@ -193,12 +225,13 @@ function App() {
 
   const advanceAfterSuccess = () => {
     if (challenge.story && !isFinalRound) {
-      setRoundIndex((current) => current + 1);
+      const nextRoundIndex = roundIndex + 1;
+      setRoundIndex(nextRoundIndex);
       setWrongAttempts(0);
       setFeedback('idle');
       setSelectedChoice(null);
       resetPagePosition();
-      playInstruction('Muy bien. Ahora completa el siguiente patrón.');
+      playPatternPrompt(nextRoundIndex);
       return;
     }
 
@@ -412,7 +445,13 @@ function App() {
             </div>
             <button
               className="icon-button icon-button--sound"
-              onClick={() => playInstruction(challenge.story && storyMoment === 'read' ? challenge.story.narrative : 'Mira con atención. ¿Qué pieza sigue en el patrón?')}
+              onClick={() => {
+                if (challenge.story && storyMoment === 'read') {
+                  playInstruction(challenge.story.narrative, challenge.story.audioPath);
+                  return;
+                }
+                playPatternPrompt();
+              }}
               aria-label={challenge.story && storyMoment === 'read' ? 'Escuchar historia' : 'Escuchar instrucción'}
             >🔊</button>
           </header>
@@ -440,7 +479,7 @@ function App() {
                   <button onClick={() => browseChapter(1)} disabled={challengeIndex === world.challenges.length - 1}>Siguiente →</button>
                 </nav>
                 <div className="story-reader__actions">
-                  <button className="button button--quiet story-listen" onClick={() => playInstruction(challenge.story?.narrative)}>
+                  <button className="button button--quiet story-listen" onClick={() => playInstruction(challenge.story?.narrative, challenge.story?.audioPath)}>
                     <span>🔊</span> Escuchar otra vez
                   </button>
                   <button className="button button--primary story-next" onClick={beginPattern}>

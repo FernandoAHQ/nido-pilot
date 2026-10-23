@@ -11,6 +11,16 @@ Object.defineProperty(window, 'speechSynthesis', {
   },
 });
 
+Object.defineProperty(window.HTMLMediaElement.prototype, 'play', {
+  configurable: true,
+  value: vi.fn(() => Promise.resolve()),
+});
+
+Object.defineProperty(window.HTMLMediaElement.prototype, 'pause', {
+  configurable: true,
+  value: vi.fn(),
+});
+
 class SpeechSynthesisUtteranceMock {
   text: string;
   lang = '';

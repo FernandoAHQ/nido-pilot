@@ -55,6 +55,7 @@ interface StoryChallengeSpec {
   missing: number;
   title: string;
   narrative: string;
+  audioPath?: string;
   imagePath: string;
   imageAlt: string;
   placeholderEmoji: string;
@@ -131,6 +132,13 @@ const makeStoryChallenges = (worldId: string, storySpecs: StoryChallengeSpec[]):
     const id = `${worldId}-${index + 1}`;
     const roundsByLevel = makeLevelRounds(id, spec, index);
     const firstRound = roundsByLevel.k1[0];
+    const generatedAudioPrefix = worldId === 'arrecife'
+      ? 'arrecife'
+      : worldId === 'estaciones'
+        ? 'estaciones'
+        : worldId === 'inventos'
+          ? 'inventos'
+          : undefined;
 
     return {
       ...firstRound,
@@ -143,6 +151,9 @@ const makeStoryChallenges = (worldId: string, storySpecs: StoryChallengeSpec[]):
         chapter: index + 1,
         title: spec.title,
         narrative: spec.narrative,
+        audioPath: spec.audioPath ?? (generatedAudioPrefix
+          ? `/audio/${generatedAudioPrefix}-${String(index + 1).padStart(2, '0')}.mp3`
+          : undefined),
         imagePath: spec.imagePath,
         imageAlt: spec.imageAlt,
         placeholderEmoji: spec.placeholderEmoji,
@@ -151,12 +162,12 @@ const makeStoryChallenges = (worldId: string, storySpecs: StoryChallengeSpec[]):
   });
 
 const fireflyStory: StoryChallengeSpec[] = [
-  { patternType: 'AB', unit: ['firefly', 'leaf'], distractors: ['flower', 'moon'], missing: 4, title: 'Una luz en el sendero', narrative: 'Lila perdió el camino a casa cuando una ráfaga apagó las luces del bosque. Lumi la encontró escondida bajo una hoja y prometió acompañarla hasta el gran roble donde vive su familia. Para descubrir el primer tramo del sendero, necesitan encender las lucecitas siguiendo el orden que dejó el viento.', imagePath: '/firefly-01-path.webp', imageAlt: 'Lumi y Lila frente a un sendero oscuro entre hojas', placeholderEmoji: '🌙' },
-  { patternType: 'AAB', unit: ['acorn', 'acorn', 'leaf'], distractors: ['berry', 'flower'], missing: 5, title: 'El puente de bellotas', narrative: 'El sendero llevó a Lumi y Lila hasta un arroyo que brillaba bajo la luna, pero al pequeño puente le faltaba una tabla. Las ardillas constructoras habían marcado cada paso seguro con bellotas y hojas antes de irse a dormir. Si completan correctamente sus señales, podrán cruzar sin despertar a los peces.', imagePath: '/firefly-02-bridge.webp', imageAlt: 'Un puente de madera decorado con bellotas y hojas', placeholderEmoji: '🌰' },
-  { patternType: 'ABB', unit: ['flower', 'berry', 'berry'], distractors: ['apple', 'leaf'], missing: 3, title: 'La merienda del bosque', narrative: 'Al otro lado del puente encontraron a una familia de conejos que recogía una merienda derramada por el viento. Lila quería seguir deprisa, pero Lumi recordó que un buen amigo siempre se detiene a ayudar. Al ordenar las flores y las moras como estaban en la manta, los conejos les mostrarán un atajo hacia el gran roble.', imagePath: '/firefly-03-picnic.webp', imageAlt: 'Animales del bosque preparando una merienda con flores y moras', placeholderEmoji: '🫐' },
-  { patternType: 'ABC', unit: ['bird', 'flower', 'firefly'], distractors: ['leaf', 'moon'], missing: 4, title: 'La canción secreta', narrative: 'El atajo terminaba frente a unos arbustos tan altos que no dejaban ver el camino. Desde una rama, el pájaro Azulín explicó que las ramas solo se abren al escuchar la canción secreta del bosque. Lumi y Lila deben completar el turno de pájaros, flores y luciérnagas para que el bosque reconozca la melodía.', imagePath: '/firefly-04-song.webp', imageAlt: 'Un pájaro cantando junto a flores y luciérnagas', placeholderEmoji: '🐦' },
-  { patternType: 'AAB', unit: ['lantern', 'lantern', 'star'], distractors: ['moon', 'firefly'], missing: 2, title: 'Faroles para la noche', narrative: 'La canción abrió las ramas y reveló la última colina, pero una neblina espesa cubría la subida. Azulín les prestó varios faroles y les dijo que las estrellas del suelo señalaban dónde colocarlos. Cuando cada farol esté en su lugar, Lila podrá volar junto a Lumi sin perderse otra vez.', imagePath: '/firefly-05-lanterns.webp', imageAlt: 'Faroles rojos iluminando una colina bajo las estrellas', placeholderEmoji: '🏮' },
-  { patternType: 'ABC', unit: ['star', 'moon', 'firefly'], distractors: ['lantern', 'sun'], missing: 5, title: 'El hogar de Lila', narrative: 'Desde la cima, Lila por fin vio el gran roble y las luces de su familia esperando entre las ramas. Solo faltaba completar una última señal en el cielo para avisarles que estaba a salvo. Al terminarla, cientos de luciérnagas iluminarán el bosque y celebrarán que Lumi ayudó a una nueva amiga a volver a casa.', imagePath: '/firefly-06-home.webp', imageAlt: 'Lila reuniéndose con su familia de luciérnagas bajo la luna', placeholderEmoji: '✨' },
+  { patternType: 'AB', unit: ['firefly', 'leaf'], distractors: ['flower', 'moon'], missing: 4, title: 'Una luz en el sendero', narrative: 'Lila perdió el camino a casa cuando una ráfaga apagó las luces del bosque. Lumi la encontró escondida bajo una hoja y prometió acompañarla hasta el gran roble donde vive su familia. Para descubrir el primer tramo del sendero, necesitan encender las lucecitas siguiendo el orden que dejó el viento.', audioPath: '/audio/bosque-de-luz-01.mp3', imagePath: '/firefly-01-path.webp', imageAlt: 'Lumi y Lila frente a un sendero oscuro entre hojas', placeholderEmoji: '🌙' },
+  { patternType: 'AAB', unit: ['acorn', 'acorn', 'leaf'], distractors: ['berry', 'flower'], missing: 5, title: 'El puente de bellotas', narrative: 'El sendero llevó a Lumi y Lila hasta un arroyo que brillaba bajo la luna, pero al pequeño puente le faltaba una tabla. Las ardillas constructoras habían marcado cada paso seguro con bellotas y hojas antes de irse a dormir. Si completan correctamente sus señales, podrán cruzar sin despertar a los peces.', audioPath: '/audio/bosque-de-luz-02.mp3', imagePath: '/firefly-02-bridge.webp', imageAlt: 'Un puente de madera decorado con bellotas y hojas', placeholderEmoji: '🌰' },
+  { patternType: 'ABB', unit: ['flower', 'berry', 'berry'], distractors: ['apple', 'leaf'], missing: 3, title: 'La merienda del bosque', narrative: 'Al otro lado del puente encontraron a una familia de conejos que recogía una merienda derramada por el viento. Lila quería seguir deprisa, pero Lumi recordó que un buen amigo siempre se detiene a ayudar. Al ordenar las flores y las moras como estaban en la manta, los conejos les mostrarán un atajo hacia el gran roble.', audioPath: '/audio/bosque-de-luz-03.mp3', imagePath: '/firefly-03-picnic.webp', imageAlt: 'Animales del bosque preparando una merienda con flores y moras', placeholderEmoji: '🫐' },
+  { patternType: 'ABC', unit: ['bird', 'flower', 'firefly'], distractors: ['leaf', 'moon'], missing: 4, title: 'La canción secreta', narrative: 'El atajo terminaba frente a unos arbustos tan altos que no dejaban ver el camino. Desde una rama, el pájaro Azulín explicó que las ramas solo se abren al escuchar la canción secreta del bosque. Lumi y Lila deben completar el turno de pájaros, flores y luciérnagas para que el bosque reconozca la melodía.', audioPath: '/audio/bosque-de-luz-04.mp3', imagePath: '/firefly-04-song.webp', imageAlt: 'Un pájaro cantando junto a flores y luciérnagas', placeholderEmoji: '🐦' },
+  { patternType: 'AAB', unit: ['lantern', 'lantern', 'star'], distractors: ['moon', 'firefly'], missing: 2, title: 'Faroles para la noche', narrative: 'La canción abrió las ramas y reveló la última colina, pero una neblina espesa cubría la subida. Azulín les prestó varios faroles y les dijo que las estrellas del suelo señalaban dónde colocarlos. Cuando cada farol esté en su lugar, Lila podrá volar junto a Lumi sin perderse otra vez.', audioPath: '/audio/bosque-de-luz-05.mp3', imagePath: '/firefly-05-lanterns.webp', imageAlt: 'Faroles rojos iluminando una colina bajo las estrellas', placeholderEmoji: '🏮' },
+  { patternType: 'ABC', unit: ['star', 'moon', 'firefly'], distractors: ['lantern', 'sun'], missing: 5, title: 'El hogar de Lila', narrative: 'Desde la cima, Lila por fin vio el gran roble y las luces de su familia esperando entre las ramas. Solo faltaba completar una última señal en el cielo para avisarles que estaba a salvo. Al terminarla, cientos de luciérnagas iluminarán el bosque y celebrarán que Lumi ayudó a una nueva amiga a volver a casa.', audioPath: '/audio/bosque-de-luz-06.mp3', imagePath: '/firefly-06-home.webp', imageAlt: 'Lila reuniéndose con su familia de luciérnagas bajo la luna', placeholderEmoji: '✨' },
 ];
 
 const festivalStory: StoryChallengeSpec[] = [

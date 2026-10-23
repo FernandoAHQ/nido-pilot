@@ -18,6 +18,7 @@ export interface StoryScene {
   chapter: number;
   title: string;
   narrative: string;
+  audioPath?: string;
   imagePath: string;
   imageAlt: string;
   placeholderEmoji: string;

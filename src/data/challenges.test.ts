@@ -17,6 +17,44 @@ describe('currículo de patrones', () => {
     expect(storyChallenges.every((challenge) => (challenge.story?.narrative.split('.').length ?? 0) >= 4)).toBe(true);
   });
 
+  it('incluye únicamente los capítulos con narración grabada disponible', () => {
+    const [bosqueDeLuz, festival, arrecife, estaciones, inventos] = WORLDS;
+
+    expect(bosqueDeLuz.challenges.map((challenge) => challenge.story?.audioPath)).toEqual([
+      '/audio/bosque-de-luz-01.mp3',
+      '/audio/bosque-de-luz-02.mp3',
+      '/audio/bosque-de-luz-03.mp3',
+      '/audio/bosque-de-luz-04.mp3',
+      '/audio/bosque-de-luz-05.mp3',
+      '/audio/bosque-de-luz-06.mp3',
+    ]);
+    expect(arrecife.challenges.map((challenge) => challenge.story?.audioPath)).toEqual([
+      '/audio/arrecife-01.mp3',
+      '/audio/arrecife-02.mp3',
+      '/audio/arrecife-03.mp3',
+      '/audio/arrecife-04.mp3',
+      '/audio/arrecife-05.mp3',
+      '/audio/arrecife-06.mp3',
+    ]);
+    expect(estaciones.challenges.map((challenge) => challenge.story?.audioPath)).toEqual([
+      '/audio/estaciones-01.mp3',
+      '/audio/estaciones-02.mp3',
+      '/audio/estaciones-03.mp3',
+      '/audio/estaciones-04.mp3',
+      '/audio/estaciones-05.mp3',
+      '/audio/estaciones-06.mp3',
+    ]);
+    expect(inventos.challenges.map((challenge) => challenge.story?.audioPath)).toEqual([
+      '/audio/inventos-01.mp3',
+      '/audio/inventos-02.mp3',
+      '/audio/inventos-03.mp3',
+      '/audio/inventos-04.mp3',
+      '/audio/inventos-05.mp3',
+      '/audio/inventos-06.mp3',
+    ]);
+    expect(festival.challenges.every((challenge) => !challenge.story?.audioPath)).toBe(true);
+  });
+
   it('incluye las tres nuevas aventuras planeadas', () => {
     expect(WORLDS.map((world) => world.name)).toEqual(expect.arrayContaining([
       'Arrecife Arcoíris',
